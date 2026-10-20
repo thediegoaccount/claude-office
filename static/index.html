@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude Office</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <main id="stagewrap">
+    <canvas id="stage"></canvas>
+    <nav id="tabs">
+      <button id="tabOffice" class="tab on">Escritório</button>
+      <button id="tabLab" class="tab">Startup Lab · apagada</button>
+      <button id="tabFun" class="tab">Lazer</button>
+      <button id="tabOverview" class="tab">Visão geral</button>
+    </nav>
+    <div id="lifebar" title="limites do plano Claude (clique para atualizar)"></div>
+    <div id="floatlog"></div>
+    <section id="ranking" class="panel">
+      <h2 id="rankHead">Seu ranking · ciclo <span class="caret">▾</span></h2>
+      <ol id="rankList"></ol>
+    </section>
+    <footer id="bottombar" class="panel">
+      <b class="logo">CLAUDE OFFICE</b>
+      <span id="bbCounts"></span>
+      <label>janela <select id="bbWindow"><option>2</option><option>8</option><option>24</option><option>72</option></select> h</label>
+      <button id="bbCli" class="seal orange">CLI: …</button>
+      <button id="bbSound" class="seal green">som: ligado</button>
+      <span id="bbClock">--:--</span>
+    </footer>
+    <button id="newBtn"><canvas id="newFace" width="40" height="55"></canvas><span><b>+ Novo Especialista</b><small>chamar alguém para uma tarefa</small></span></button>
+    <div id="diag" hidden></div>
+    <div id="tooltip" hidden></div>
+  </main>
+  <aside id="side">
+    <section class="panel">
+      <h2>Agentes no escritório</h2>
+      <ul id="agentList" class="agents"></ul>
+    </section>
+    <section id="detail" class="panel empty">
+      <h2>Agente selecionado</h2>
+      <div class="body">
+        <div id="detMeta"></div>
+        <div id="detPerm"></div>
+        <div id="detForm" hidden>
+          <textarea id="cmdText" rows="3" placeholder="Enviar comando para esta sessão (Ctrl+Enter envia, Ctrl+V cola imagem)"></textarea>
+          <div id="cmdTray" class="tray"></div>
+          <div class="row"><select id="cmdModel"></select><button id="cmdSend" class="btn blue">Enviar</button></div>
+          <div id="cmdStatus" class="meta"></div>
+        </div>
+        <div id="detJob"></div>
+        <div id="detEvents" class="events"></div>
+      </div>
+    </section>
+    <section class="panel grow">
+      <h2>Chatlog</h2>
+      <div id="chatlog" class="events"></div>
+    </section>
+  </aside>
+</div>
+<div id="toasts"></div>
+
+<div id="dlgNew" class="modal"><div class="panel dialog">
+  <h2>Novo Especialista</h2>
+  <div class="body">
+    <div id="newWarn" class="warn" hidden></div>
+    <label>Pasta de trabalho<select id="newCwd"></select></label>
+    <label>Nome do bonequinho (título)<input id="newTitle" maxlength="60" placeholder="ex.: ESPECIALISTA EM TESTES"></label>
+    <label>Modelo<select id="newModel"></select></label>
+    <label>Primeira mensagem<textarea id="newPrompt" rows="5" placeholder="O que ele deve fazer? (Ctrl+V cola imagem)"></textarea></label>
+    <div id="newTray" class="tray"></div>
+    <p id="newCli" class="meta mono"></p>
+    <p class="meta">Ações que pedem permissão aparecem no balão PERMITIR (40s).</p>
+    <div class="row end"><button id="newCancel" class="btn">Cancelar</button><button id="newSend" class="btn blue">Chamar especialista</button></div>
+  </div>
+</div></div>
+
+<div id="dlgPlan" class="modal"><div class="panel dialog">
+  <h2>Quer um plano antes?</h2>
+  <div class="body">
+    <pre id="planPreview" class="full"></pre>
+    <div class="row end"><button id="planCancel" class="btn">Cancelar</button><button id="planNo" class="btn">Não, executar direto</button><button id="planYes" class="btn blue">Sim, quero um plano</button></div>
+  </div>
+</div></div>
+
+<script src="sprites.js"></script>
+<script src="office.js"></script>
+</body>
+</html>
