@@ -1,8 +1,18 @@
 # Claude Office
 
+![Visão geral do Claude Office: escritório, sala do gerente, cafeteria, Startup Lab, sala de reunião, terraço e arcade](docs/img/visao-geral.png)
+
 Um escritório isométrico em pixel-art, no estilo Habbo Hotel, que mostra **ao vivo** o que as suas sessões do **Claude Code** estão fazendo nesta máquina. Cada sessão vira um bonequinho numa mesa: ele digita quando trabalha, pensa, toma café quando fica ocioso, cochila, chama subagentes como "reforços" e levanta a mão quando precisa de permissão — que você aprova com um clique. A página também cria sessões novas e envia comandos (com imagens coladas) para sessões existentes pelo CLI `claude`.
 
 Tudo roda local: o servidor escuta só em `127.0.0.1`, lê as transcrições do Claude Code **somente leitura** e não envia nada para fora.
+
+## Galeria
+
+| Escritório | Lazer: reunião, terraço e arcade |
+|---|---|
+| ![Escritório com agentes trabalhando, balões de ferramentas, pedido de permissão e barra de limites do plano](docs/img/escritorio.png) | ![Sala de reunião com um agente apresentando o plano no telão, terraço com fonte e guarda-sol, arcade com sinuca e pista de dança](docs/img/lazer.png) |
+| **À noite** | |
+| ![Escritório à noite com só as telas dos computadores, o varal de luzes e a pista de dança acesos](docs/img/noite.png) | Capturas do modo demo (`python server.py --demo`), com dados fictícios. Para abrir direto numa aba use `?sala=escritorio`, `lab`, `lazer` ou `geral`; para ver outro horário, `?hora=22`. |
 
 ## Requisitos
 

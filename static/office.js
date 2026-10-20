@@ -2236,6 +2236,8 @@
     resize();
     bind();
     newSeed();
+    const sala = { escritorio: "office", lab: "annex", lazer: "fun", geral: "overview" }[(/[?&]sala=([a-z]+)/.exec(window.location.search || "") || [])[1]];
+    if (sala) setRoom(sala, true);
     try { S.token = (await api("/api/token")).token; } catch (e) { S.token = null; }
     try { S.models = await api("/api/cli/models"); } catch (e) { S.models = { groups: [] }; }
     fillModels($("cmdModel"), "modelo atual da sessão");
