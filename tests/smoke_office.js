@@ -132,4 +132,17 @@ const { NOW, agent, sub, state, run, check, done } = require("./helpers");
   check(near(p2, O.PRESENTER), "o próximo em plano assume o telão");
   O.renderScene();
 }
+{
+  // ninguém sentado na reunião pode ser desenhado por cima da mesa
+  const O = load().__office;
+  const t = O.CONF_TABLE;
+  const tableKeys = O.FURNITURE.map((f) => f.key).filter((k) => k > t.x + t.y && k < t.x + t.w + t.y + t.d);
+  for (const st of O.FUN.meeting) {
+    const key = st.x + st.y;
+    const slice = t.x + Math.floor(st.x - t.x) + 0.5 + t.y + t.d / 2;
+    check(tableKeys.some((k) => Math.abs(k - slice) < 1e-9), `fatia da mesa não encontrada para x=${st.x}`);
+    if (!st.back) check(key < slice, `quem senta atrás (x=${st.x}) seria desenhado sobre a mesa`);
+    else check(key > slice, `quem senta na frente (x=${st.x}) seria desenhado atrás da mesa`);
+  }
+}
 done("smoke_office");

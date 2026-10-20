@@ -1161,19 +1161,28 @@
     box(s.x - 0.2, s.y - 0.18, 0.4, 0.36, 4, B3(col), 14);
     if (part === false) box(s.x - 0.18, s.y - 0.27, 0.36, 0.07, 22, B3(shade(col, 0.85)), 18);
   }
-  function drawConfTable() {
-    const t = CONF_TABLE;
-    dropShadow(t.x, t.y, t.w, t.d);
-    for (const [lx, ly] of [[0.2, 0.2], [t.w - 0.3, 0.2], [0.2, t.d - 0.3], [t.w - 0.3, t.d - 0.3]]) box(t.x + lx, t.y + ly, 0.1, 0.1, 26, B3("#3e2723"));
-    box(t.x, t.y, t.w, t.d, 4, ["#6d4c41", "#4e342e", "#5d4037"], 26);
-    for (let k = 0; k < 5; k++) box(t.x + 0.4 + k * 1.2, t.y + 0.12, 0.34, 0.26, 1, B3("#ffffff"), 30);
-    for (let k = 0; k < 5; k++) {
-      const lx = t.x + 0.38 + k * 1.2, ly = t.y + t.d - 0.42;
-      box(lx, ly, 0.4, 0.26, 2, B3("#95a5a6"), 30);
-      poly(ctx, [iso(lx, ly, 32), iso(lx + 0.4, ly, 32), iso(lx + 0.4, ly, 44), iso(lx, ly, 44)], "#34495e");
+  // a mesa da reunião é longa: é desenhada em fatias de 1 tile, cada uma com a própria profundidade,
+  // para quem senta atrás ficar atrás da mesa (e não em cima dela)
+  const CONF_SLICES = Math.ceil(CONF_TABLE.w);
+  function drawConfTableSlice(k) {
+    const t = CONF_TABLE, x0 = t.x + k, x1 = Math.min(t.x + t.w, x0 + 1), inSlice = (x) => x >= x0 && x < x1;
+    dropShadow(x0, t.y, x1 - x0, t.d);
+    for (const [lx, ly] of [[0.2, 0.2], [t.w - 0.3, 0.2], [0.2, t.d - 0.3], [t.w - 0.3, t.d - 0.3]]) if (inSlice(t.x + lx)) box(t.x + lx, t.y + ly, 0.1, 0.1, 26, B3("#3e2723"));
+    box(x0, t.y, x1 - x0, t.d, 4, ["#6d4c41", "#4e342e", "#5d4037"], 26);
+    for (let n = 0; n < 5; n++) {
+      const px = t.x + 0.4 + n * 1.2;
+      if (inSlice(px)) box(px, t.y + 0.12, 0.34, 0.26, 1, B3("#ffffff"), 30);
+      const lx = t.x + 0.38 + n * 1.2, ly = t.y + t.d - 0.42;
+      if (inSlice(lx)) {
+        box(lx, ly, 0.4, 0.26, 2, B3("#95a5a6"), 30);
+        poly(ctx, [iso(lx, ly, 32), iso(lx + 0.4, ly, 32), iso(lx + 0.4, ly, 44), iso(lx, ly, 44)], "#34495e");
+      }
     }
-    box(t.x + t.w / 2 - 0.35, t.y + 0.55, 0.7, 0.45, 5, B3("#f8c291"), 30);
-    for (let k = 0; k < 4; k++) { const [px, py] = iso(t.x + t.w / 2 - 0.22 + (k % 2) * 0.32, t.y + 0.66 + Math.floor(k / 2) * 0.22, 36); ellipse(px, py, 5, 2.5, ["#e84393", "#6d4c41", "#fdcb6e", "#e84393"][k]); }
+    const dx = t.x + 2.1;
+    if (inSlice(dx)) {
+      box(dx, t.y + 0.55, 0.7, 0.45, 5, B3("#f8c291"), 30);
+      for (let n = 0; n < 4; n++) { const [px, py] = iso(dx + 0.13 + (n % 2) * 0.32, t.y + 0.66 + Math.floor(n / 2) * 0.22, 36); ellipse(px, py, 5, 2.5, ["#e84393", "#6d4c41", "#fdcb6e", "#e84393"][n]); }
+    }
   }
   function drawProjector() {
     const p = PROJ_SCREEN, X = p.x + p.w;
@@ -1370,7 +1379,7 @@
     add(FOOSBALL.x + FOOSBALL.y + 1.4, drawFoosball);
     add(BAR.x + BAR.y + 1.7, drawBar);
     add(-1e4, drawDanceFloor);
-    add(CONF_TABLE.x + CONF_TABLE.y + 1.2, drawConfTable);
+    for (let k = 0; k < CONF_SLICES; k++) add(CONF_TABLE.x + k + 0.5 + CONF_TABLE.y + CONF_TABLE.d / 2, () => drawConfTableSlice(k));
     FUN.meeting.forEach((st) => {
       if (!st.back) add(st.x + st.y - 0.05, () => drawSeatChair(st, "#34495e", false));
       else { add(st.x + st.y - 0.05, () => drawSeatChair(st, "#34495e", "seat")); add(st.x + st.y + 0.3, () => drawSeatChair(st, "#34495e", "back")); }
@@ -2249,7 +2258,7 @@
 
   window.__office = {
     manager, avatars, seats, seatFor, seatTarget, cam, setRoom, toView, fromView, viewSize, route, OBSTACLES, DESKS, update, step, evaluate,
-    freePoint, segmentFree, roomOf, nearestFree, nearSpot, subSpot, view, debugScale: (k) => { view.scale = k; roomCache = null; }, nightLevel, FUN, PRESENTER, bulbs, burst, FX, ARCHETYPES, deskPhonePos, setHour: (h) => { S.hourOverride = h; }, nightLights, lookFor, costLevel, toolLabel, modelShort, renderScene, iso, now: nowS, S,
+    freePoint, segmentFree, roomOf, nearestFree, nearSpot, subSpot, view, debugScale: (k) => { view.scale = k; roomCache = null; }, nightLevel, FUN, PRESENTER, CONF_TABLE, FURNITURE, bulbs, burst, FX, ARCHETYPES, deskPhonePos, setHour: (h) => { S.hourOverride = h; }, nightLights, lookFor, costLevel, toolLabel, modelShort, renderScene, iso, now: nowS, S,
     constants: { TW, TH, MAIN_W, W, H, WH, WALL, SPLIT_X, SPLIT_Y, PW, DOORS, ANNEX_X, ANNEX_DOORS, SOFA_SEATS, STANDING, CAFE_SPOTS, DOOR_SPOT, SUB_SPOTS, CHAIR, PLANTS, GRID, CLEAR },
   };
   if (TEST) resize();
