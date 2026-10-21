@@ -963,23 +963,28 @@
     dropShadow(m.x, m.y, m.w, m.d);
     box(m.x, m.y, m.w, m.d, 30, B3("#4a2f1e"));
     box(m.x, m.y, m.w, m.d, 3, B3("#3a2416"), 30);
-    box(m.x + 0.9, m.y + 0.1, 0.9, 0.1, 30, ["#111", "#0b0b0b", "#151515"], 33);
-    const ag = (S.state && S.state.agents) || [];
-    const p0 = iso(m.x + 0.95, m.y + 0.2, 60);
+    // monitor no canto esquerdo da mesa (base + haste + painel), com a tela virada para a cena,
+    // para não cobrir o gerente sentado atrás da mesa
+    const mx = m.x + 0.12, my = m.y + 0.3, mw = 0.72, front = my + 0.06;
+    box(m.x + 0.33, m.y + 0.4, 0.3, 0.2, 2, B3("#636e72"), 33);
+    box(m.x + 0.45, m.y + 0.46, 0.06, 0.06, 7, B3("#7f8c8d"), 35);
+    box(mx, my, mw, 0.06, 28, ["#2b3034", "#1e2427", "#262c30"], 40);
     ctx.save();
     ctx.shadowColor = "#4fc3ff"; ctx.shadowBlur = 8;
-    poly(ctx, [iso(m.x + 0.95, m.y + 0.2, 36), iso(m.x + 1.75, m.y + 0.2, 36), iso(m.x + 1.75, m.y + 0.2, 61), iso(m.x + 0.95, m.y + 0.2, 61)], "#0d2b45");
+    poly(ctx, [iso(mx + 0.04, front, 43), iso(mx + mw - 0.04, front, 43), iso(mx + mw - 0.04, front, 65), iso(mx + 0.04, front, 65)], "#0d2b45");
     ctx.restore();
+    const ag = (S.state && S.state.agents) || [];
     for (let k = 0; k < Math.min(20, ag.length); k++) {
       const cx = k % 5, cy = Math.floor(k / 5);
+      const [px, py] = iso(mx + 0.1 + cx * 0.12, front, 61 - cy * 5);
       ctx.fillStyle = STATUS_COLORS[ag[k].status] || "#888";
-      ctx.fillRect(p0[0] + 3 + cx * 4.5, p0[1] + 3 + cy * 5 + cx * 2.25, 3, 3);
+      ctx.fillRect(px - 1.5, py - 1.5, 3, 3);
     }
-    box(m.x + 0.2, m.y + 0.4, 0.5, 0.35, 1, B3("#ffffff"), 33);
+    box(m.x + 1.55, m.y + 0.3, 0.5, 0.35, 1, B3("#ffffff"), 33);
     box(m.x + 2.2, m.y + 0.5, 0.12, 0.12, 8, B3("#ecf0f1"), 33);
     box(m.x + 1.0, m.y + 0.75, 0.6, 0.12, 6, B3("#d4a017"), 33);
-    if (!manager.phone) drawPhone(m.x + 0.25, m.y + 0.08, null, 33);
-    else box(m.x + 0.25, m.y + 0.08, 0.24, 0.18, 4, B3("#2d3436"), 33);
+    if (!manager.phone) drawPhone(m.x + 1.95, m.y + 0.1, null, 33);
+    else box(m.x + 1.95, m.y + 0.1, 0.24, 0.18, 4, B3("#2d3436"), 33);
     box(m.x + 2.3, m.y + 0.12, 0.16, 0.16, 3, B3("#7f6000"), 33);
     box(m.x + 2.34, m.y + 0.16, 0.08, 0.08, 14, B3("#f1c40f"), 36);
   }
@@ -1465,7 +1470,7 @@
       out.push({ p, r: on ? 95 : 55, a: on ? 1 : 0.7, glow: on ? "rgba(116,185,255,.35)" : "rgba(160,190,215,.18)", desk: true });
       out.push({ p: d.room === "annex" ? [d.x + 1.36, d.y + 0.56, 36] : [d.x + 1.42, d.y + 0.16, 50], r: 22, a: 0.8, glow: null, desk: true });
     });
-    out.push({ p: [MANAGER.x + 1.35, MANAGER.y + 0.25, 48], r: 90, a: 1, glow: "rgba(79,195,255,.3)" });
+    out.push({ p: [MANAGER.x + 0.48, MANAGER.y + 0.4, 54], r: 90, a: 1, glow: "rgba(79,195,255,.3)" });
     out.push({ p: [TV.x + 0.9, TV.y + 0.2, 42], r: 80, a: 0.9, glow: "rgba(61,139,253,.3)" });
     out.push({ p: [COUNTER.x + 0.3, COUNTER.y + 2.6, 46], r: 55, a: 0.75, glow: "rgba(255,190,110,.22)" });
     out.push({ p: [HIGH_TABLE.x + 0.35, HIGH_TABLE.y + 0.35, 60], r: 90, a: 0.95, glow: "rgba(255,200,120,.3)" });
@@ -1847,7 +1852,8 @@
       const secs = Math.round((job.finished || nowS()) - job.started);
       const head = job.running ? `executando… ${secs}s <button class="btn red" data-cancel="${job.id}">Cancelar</button>`
         : `${job.error ? "falhou" : job.incomplete ? "resposta possivelmente incompleta" : "última resposta"} · ${fmtTime(job.finished)} · ${secs}s · ${esc(modelShort(job.model || a.model))}`;
-      $("detJob").innerHTML = `<div class="job"><b>Última resposta</b><div class="meta">${head}</div>${job.error ? `<div class="err">${esc(job.error)}</div>` : ""}${job.output ? `<pre class="full">${esc(job.output)}</pre>` : ""}</div>`;
+      const btns = job.output ? `<span class="jobBtns"><button class="mini" data-copyjob="${esc(job.id)}" title="Copiar a resposta">⧉ Copiar</button><button class="mini" data-openjob="${esc(job.id)}" title="Abrir numa janela maior">⤢ Ampliar</button></span>` : "";
+      $("detJob").innerHTML = `<div class="job"><div class="jobHead"><b>Última resposta</b>${btns}</div><div class="meta">${head}</div>${job.error ? `<div class="err">${esc(job.error)}</div>` : ""}${job.output ? `<pre class="full">${esc(job.output)}</pre>` : ""}</div>`;
     } else $("detJob").innerHTML = "";
     $("detEvents").innerHTML = (a.events || []).map((e) => `<div class="ev"><span class="t">${fmtTime(e.ts)}</span> ${evItem(e, a.id)}</div>`).join("") || `<p class="muted">sem eventos</p>`;
   }
@@ -1857,6 +1863,63 @@
     const d = new Date(ts * 1000), hm = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
     if (ts - nowS() < 20 * 3600) return `reinicia às ${hm}`;
     return `reinicia ${["dom", "seg", "ter", "qua", "qui", "sex", "sáb"][d.getDay()]} ${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")} ${hm}`;
+  }
+
+  // ---------- leitura da resposta: copiar e janela ampliada ----------
+  function mdToHtml(src) {
+    const out = [];
+    const inline = (s) => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+      .replace(/(^|[^*\w])\*([^*\n]+)\*(?!\w)/g, "$1<i>$2</i>");
+    let list = null, para = [], code = null;
+    const flush = () => {
+      if (para.length) { out.push(`<p>${para.map(inline).join("<br>")}</p>`); para = []; }
+      if (list) { out.push(`<${list.tag}>${list.items.map((it) => `<li>${inline(it)}</li>`).join("")}</${list.tag}>`); list = null; }
+    };
+    for (const line of String(src || "").replace(/\r\n/g, "\n").split("\n")) {
+      if (code) {
+        if (/^\s*```/.test(line)) { out.push(`<pre>${esc(code.join("\n"))}</pre>`); code = null; } else code.push(line);
+        continue;
+      }
+      if (/^\s*```/.test(line)) { flush(); code = []; continue; }
+      const h = /^(#{1,4})\s+(.*)$/.exec(line);
+      if (h) { flush(); out.push(`<h${h[1].length + 2}>${inline(h[2])}</h${h[1].length + 2}>`); continue; }
+      const li = /^\s*(?:[-*•]|(\d+)[.)])\s+(.*)$/.exec(line);
+      if (li) {
+        const tag = li[1] ? "ol" : "ul";
+        if (para.length || (list && list.tag !== tag)) flush();
+        list = list || { tag, items: [] };
+        list.items.push(li[2]);
+        continue;
+      }
+      if (!line.trim()) { flush(); continue; }
+      if (list) flush();
+      para.push(line);
+    }
+    if (code) out.push(`<pre>${esc(code.join("\n"))}</pre>`);
+    flush();
+    return out.join("");
+  }
+  async function copyText(text) {
+    try {
+      await window.navigator.clipboard.writeText(String(text || ""));
+    } catch (e) {
+      const ta = doc.createElement("textarea");
+      ta.value = String(text || "");
+      ta.style.position = "fixed"; ta.style.opacity = "0";
+      doc.body.appendChild(ta); ta.select();
+      try { doc.execCommand("copy"); } catch (e2) { return toast("Não consegui copiar: selecione o texto e use Ctrl+C", "red"); } finally { ta.remove(); }
+    }
+    toast("Resposta copiada");
+  }
+  function openReader(job) {
+    const a = agentById(job.session);
+    const secs = job.finished ? Math.round(job.finished - job.started) : null;
+    $("readTitle").textContent = [a ? a.title : job.title || "Resposta", job.finished ? fmtTime(job.finished) : "", secs != null ? `${secs}s` : "",
+      modelShort(job.model || (a && a.model))].filter(Boolean).join(" · ");
+    S.readText = job.output || "";
+    $("readBody").innerHTML = mdToHtml(S.readText);
+    $("readBody").scrollTop = 0;
+    modal("dlgRead", true);
   }
 
   function renderLife() {
@@ -2199,7 +2262,15 @@
       else if (t.dataset.decide) decide(t.dataset.id, t.dataset.decide);
       else if (t.dataset.cancel) api("/api/cli/cancel", { id: t.dataset.cancel }).then(refreshCli).catch((e) => toast(e.message, "red"));
       else if (t.dataset.rm) { const [w, i] = t.dataset.rm.split(":"); images[w].splice(+i, 1); renderTray(w); }
+      else if (t.dataset.copyjob) { const j = S.jobs.find((x) => x.id === t.dataset.copyjob); if (j) copyText(j.output); }
+      else if (t.dataset.openjob) { const j = S.jobs.find((x) => x.id === t.dataset.openjob); if (j) openReader(j); }
     });
+    const closeReader = () => modal("dlgRead", false);
+    $("readClose").onclick = closeReader;
+    $("readDone").onclick = closeReader;
+    $("readCopy").onclick = () => { if (S.readText) copyText(S.readText); };
+    $("dlgRead").addEventListener("click", (ev) => { if (ev.target === $("dlgRead")) closeReader(); });
+    doc.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && $("dlgRead").classList.contains("open")) closeReader(); });
     const win = $("bbWindow");
     win.value = String(S.hours);
     win.onchange = () => { S.hours = +win.value; store.set("office.hours", win.value); poll(); };
@@ -2258,7 +2329,7 @@
 
   window.__office = {
     manager, avatars, seats, seatFor, seatTarget, cam, setRoom, toView, fromView, viewSize, route, OBSTACLES, DESKS, update, step, evaluate,
-    freePoint, segmentFree, roomOf, nearestFree, nearSpot, subSpot, view, debugScale: (k) => { view.scale = k; roomCache = null; }, nightLevel, FUN, PRESENTER, CONF_TABLE, FURNITURE, bulbs, burst, FX, ARCHETYPES, deskPhonePos, setHour: (h) => { S.hourOverride = h; }, nightLights, lookFor, costLevel, toolLabel, modelShort, renderScene, iso, now: nowS, S,
+    freePoint, segmentFree, roomOf, nearestFree, nearSpot, subSpot, view, debugScale: (k) => { view.scale = k; roomCache = null; }, nightLevel, FUN, PRESENTER, CONF_TABLE, FURNITURE, mdToHtml, bulbs, burst, FX, ARCHETYPES, deskPhonePos, setHour: (h) => { S.hourOverride = h; }, nightLights, lookFor, costLevel, toolLabel, modelShort, renderScene, iso, now: nowS, S,
     constants: { TW, TH, MAIN_W, W, H, WH, WALL, SPLIT_X, SPLIT_Y, PW, DOORS, ANNEX_X, ANNEX_DOORS, SOFA_SEATS, STANDING, CAFE_SPOTS, DOOR_SPOT, SUB_SPOTS, CHAIR, PLANTS, GRID, CLEAR },
   };
   if (TEST) resize();

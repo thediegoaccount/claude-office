@@ -88,3 +88,13 @@ def test_demo(demo_srv):
     assert st["source"]["db"] == "modo demo (dados fictícios)"
     code, r = req(demo_srv, "POST", "/api/cli/new", {"cwd": "x"}, {"X-Office-Token": permissions.TOKEN})
     assert code == 409 and "demo" in r["error"]
+
+
+def test_second_instance_on_same_port(srv, capsys):
+    server.main(["--demo", "--port", str(srv)])
+    assert "já está em uso" in capsys.readouterr().out
+
+
+def test_favicon(srv):
+    code, body = req(srv, "GET", "/icon.png")
+    assert code == 200 and body[:8] == b"\x89PNG\r\n\x1a\n"

@@ -145,4 +145,17 @@ const { NOW, agent, sub, state, run, check, done } = require("./helpers");
     else check(key > slice, `quem senta na frente (x=${st.x}) seria desenhado atrás da mesa`);
   }
 }
+{
+  // leitura ampliada: Markdown simples, sempre escapando HTML vindo da resposta
+  const md = load().__office.mdToHtml;
+  const html = md([
+    "## Título", "", "**O que mudei:**", "- item *um*", "- item `dois`", "", "1. primeiro", "2. segundo", "",
+    "```", "<b>código</b>", "```", "<script>alert(1)</script>",
+  ].join("\n"));
+  check(html.includes("<h4>Título</h4>") && html.includes("<b>O que mudei:</b>"), "título e negrito");
+  check(html.includes("<ul><li>item <i>um</i></li><li>item <code>dois</code></li></ul>"), "lista com itálico e código");
+  check(html.includes("<ol><li>primeiro</li><li>segundo</li></ol>"), "lista numerada");
+  check(html.includes("<pre>&lt;b&gt;código&lt;/b&gt;</pre>"), "bloco de código escapado");
+  check(!html.includes("<script>") && html.includes("&lt;script&gt;"), "HTML da resposta precisa ser escapado");
+}
 done("smoke_office");

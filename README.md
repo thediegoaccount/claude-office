@@ -27,7 +27,17 @@ Tudo roda local: o servidor escuta só em `127.0.0.1`, lê as transcrições do 
 run.bat
 ```
 
-Abre `http://127.0.0.1:8777` e sobe o servidor. Alternativas:
+Sobe o servidor e abre `http://127.0.0.1:8777` no navegador assim que ele estiver pronto. Se o escritório já estiver rodando, só abre a página.
+
+**Atalho na área de trabalho** (com o ícone do gerente):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\create_shortcut.ps1
+```
+
+O atalho abre o servidor numa janela minimizada; fechar essa janela encerra o escritório. O ícone é gerado por `python scripts/make_icon.py` (`static/icon.ico` e `static/icon.png`, que também é o favicon).
+
+Alternativas:
 
 ```bat
 python server.py --demo                       :: dados fictícios, sem tocar no ~/.claude

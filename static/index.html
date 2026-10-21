@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Claude Office</title>
+<link rel="icon" type="image/png" href="icon.png">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -75,6 +76,12 @@
     <p class="meta">Ações que pedem permissão aparecem no balão PERMITIR (40s).</p>
     <div class="row end"><button id="newCancel" class="btn">Cancelar</button><button id="newSend" class="btn blue">Chamar especialista</button></div>
   </div>
+</div></div>
+
+<div id="dlgRead" class="modal"><div class="panel dialog reader">
+  <h2><span id="readTitle">Resposta</span><button id="readClose" class="x" title="Fechar (Esc)">×</button></h2>
+  <div id="readBody" class="md"></div>
+  <div class="row end readFoot"><button id="readCopy" class="btn">⧉ Copiar</button><button id="readDone" class="btn blue">Fechar</button></div>
 </div></div>
 
 <div id="dlgPlan" class="modal"><div class="panel dialog">

@@ -6,6 +6,7 @@ import os
 import sys
 import threading
 import time
+import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -198,9 +199,14 @@ class Handler(BaseHTTPRequestHandler):
         raise LookupError("rota não encontrada")
 
 
+class OfficeServer(ThreadingHTTPServer):
+    # No Windows, SO_REUSEADDR deixa dois processos escutarem a mesma porta; ali a porta precisa ser exclusiva.
+    allow_reuse_address = os.name != "nt"
+
+
 def make_server(port=8777, demo_mode=False, projects=None):
     handler = type("OfficeHandler", (Handler,), {"app": Office(demo_mode, projects)})
-    srv = ThreadingHTTPServer(("127.0.0.1", port), handler)
+    srv = OfficeServer(("127.0.0.1", port), handler)
     srv.daemon_threads = True
     return srv
 
@@ -210,10 +216,21 @@ def main(argv=None):
     ap.add_argument("--demo", action="store_true", help="dados fictícios")
     ap.add_argument("--projects", help="pasta de projetos do Claude Code (padrão: ~/.claude/projects)")
     ap.add_argument("--port", type=int, default=8777)
+    ap.add_argument("--abrir", action="store_true", help="abre o navegador quando o servidor estiver pronto")
     a = ap.parse_args(argv)
-    srv = make_server(a.port, a.demo, a.projects or os.environ.get("CLAUDE_OFFICE_PROJECTS"))
+    url = f"http://127.0.0.1:{a.port}"
+    try:
+        srv = make_server(a.port, a.demo, a.projects or os.environ.get("CLAUDE_OFFICE_PROJECTS"))
+    except OSError:
+        print(f"A porta {a.port} já está em uso: o Claude Office já deve estar rodando. Abrindo {url}", flush=True)
+        if a.abrir:
+            webbrowser.open(url)
+        return
     where = "modo demo (dados fictícios)" if a.demo else srv.RequestHandlerClass.app.projects
     print(f"Claude Office em http://127.0.0.1:{srv.server_address[1]}  (projetos: {where})", flush=True)
+    print("Deixe esta janela aberta enquanto usa o escritório; feche-a (ou Ctrl+C) para encerrar.", flush=True)
+    if a.abrir:
+        webbrowser.open(url)
     t = threading.Thread(target=srv.serve_forever, daemon=True)
     t.start()
     try:
