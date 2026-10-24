@@ -49,6 +49,16 @@ $CanaisPadrao = @(
     "Tech BR|@canaltech"
     "Tech BR|@TecMundo"
     "Tech BR|@olhardigital"
+    "Dev BR|@ManoDeyvin"
+    "Dev BR|@codigofontetv"
+    "Dev BR|@FilipeDeschamps"
+    "Dev BR|@Akitando"
+    "Dev BR|UCEf5U1dB5a2e2S-XUlnhxSA"   # Diolinux
+    "Dev BR|@LucasMontano"
+    "Dev BR|@rocketseat"
+    "Dev BR|@ManualdoDev"
+    "Dev BR|@ONovoProgramador"
+    "Dev BR|@FiascoDev"
 )
 
 $UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36"

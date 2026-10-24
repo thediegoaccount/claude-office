@@ -4,3 +4,7 @@ IA|@aiexplained-official
 IA|@TwoMinutePapers
 Tech|@Fireship
 Tech BR|@canaltech
+Dev BR|@ManoDeyvin
+Dev BR|@codigofontetv
+Dev BR|@FilipeDeschamps
+Dev BR|UCEf5U1dB5a2e2S-XUlnhxSA
