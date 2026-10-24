@@ -23,6 +23,7 @@ param(
     [string]$ArquivoCanais = (Join-Path $PSScriptRoot "canais-youtube.txt"),
     [switch]$NaoAbrir
 )
+# O JSON para o painel Radar IA (aba YouTube) e sempre gerado em saida\yt_feed.json
 
 $ErrorActionPreference = "Stop"
 # Windows PowerShell 5.1 ainda nasce sem TLS 1.2 habilitado
@@ -162,6 +163,20 @@ $ordenados = $videos | Sort-Object Publicado -Descending
 $ordenados | Select-Object @{ n = "Publicado"; e = { $_.Publicado.ToString("yyyy-MM-dd HH:mm") } }, Categoria, Canal, Titulo, Url, Views |
     Export-Csv -Path $csv -NoTypeInformation -Encoding UTF8 -Delimiter ";"
 
+$jsonPainel = Join-Path $PastaSaida "yt_feed.json"
+$linhasJson = @($ordenados | ForEach-Object {
+    [ordered]@{
+        id        = ($_.Url -replace '^.*v=', '')
+        title     = $_.Titulo
+        channel   = $_.Canal
+        category  = $_.Categoria
+        published = $_.Publicado.ToString("yyyy-MM-dd")
+        views     = $_.Views
+        url       = $_.Url
+    }
+})
+ConvertTo-Json -InputObject $linhasJson -Depth 3 | Set-Content -Path $jsonPainel -Encoding UTF8
+
 $cards = foreach ($v in $ordenados) {
     @"
 <a class="card" href="$($v.Url)" target="_blank" data-cat="$(HtmlEnc $v.Categoria)">
@@ -217,4 +232,5 @@ Write-Host ""
 Write-Host "$($ordenados.Count) video(s) encontrados nos ultimos $Dias dia(s)." -ForegroundColor Cyan
 Write-Host "HTML: $html"
 Write-Host "CSV : $csv"
+Write-Host "JSON: $jsonPainel  (envie este arquivo para atualizar o painel)"
 if (-not $NaoAbrir -and $ordenados.Count -gt 0) { Start-Process $html }
