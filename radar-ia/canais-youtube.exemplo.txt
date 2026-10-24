@@ -1,0 +1,6 @@
+# Copie para canais-youtube.txt e edite. Formato: Categoria|@handle
+# (tambem aceita o ID do canal, que comeca com UC...)
+IA|@aiexplained-official
+IA|@TwoMinutePapers
+Tech|@Fireship
+Tech BR|@canaltech

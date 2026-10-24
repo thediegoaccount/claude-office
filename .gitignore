@@ -4,3 +4,7 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 *.tmp
+
+radar-ia/saida/
+radar-ia/youtube-canais-cache.json
+radar-ia/canais-youtube.txt
