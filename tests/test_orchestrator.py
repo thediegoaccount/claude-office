@@ -46,7 +46,7 @@ def test_menu_and_prompt():
     cfg = {"models": ["claude-fable-5-1"], "providers": {"gemini": {"api_key": "k", "models": ["g-flash"]}, "openai": {"models": ["gpt"]}}}
     assert orchestrator.menu(cfg) == ["gemini/g-flash", "haiku", "sonnet", "opus", "claude-fable-5-1"]  # sem chave fica de fora
     text = orchestrator.build_prompt(cfg, "explique JOIN", "opus")
-    assert "explique JOIN" in text and "Modelo pedido pelo usuário: opus" in text and "2 a 4 partes" in text
+    assert "explique JOIN" in text and "Modelo pedido pelo usuário: opus" in text and "2 a 4 partes" in text and "um tema por parte" in text
 
 
 def test_parse_validates():
@@ -82,7 +82,9 @@ def test_splits_into_subagents(orch, monkeypatch):
     done = finish(cli_bridge.new_session(orch["cwd"], "Release", "prepare a release", model="sonnet", look_seed="p-x", orchestrate=True))
     calls = launches(orch["log"])
     assert sorted(model_of(c) for c in calls) == ["haiku", "opus", "sonnet"] and len(done["sessions"]) == 3
-    assert {c["prompt"] for c in calls} == {p["prompt"] for p in parts}
+    for p in parts:
+        call = next(c for c in calls if p["prompt"] in c["prompt"])
+        assert f'cuida só do tema \\"{p["title"]}\\"'.replace("\\", "") in call["prompt"] and "trabalhando em paralelo" in call["prompt"]
     names = cli_bridge.load_names()
     assert sorted(names[s]["title"] for s in done["sessions"]) == ["Release · API", "Release · Bug", "Release · Testes"]
     assert sorted(names[s]["routed"]["part"] for s in done["sessions"]) == [[1, 3], [2, 3], [3, 3]]

@@ -26,9 +26,12 @@ Regras:
   troque por um menor; se for insuficiente, troque por um maior.
 - Modelos marcados como "só conversa" não leem arquivos nem executam comandos: use-os apenas para perguntas que não dependem do projeto.
 - "reason": até 15 palavras, em português, explicando a escolha.
-- "parts": deixe [] quando um único agente resolve. Divida em 2 a {max_parts} partes SOMENTE se elas forem independentes entre si
-  e não alterarem os mesmos arquivos. Cada parte é um objeto {{"title": "...", "prompt": "...", "effort": 1, "model": "nome"}} com um
-  prompt completo e autossuficiente (o subagente não vê a demanda original), e com esforço e modelo próprios, pelas mesmas regras.
+- "parts": deixe [] quando a demanda trata de um tema só. Divida em 2 a {max_parts} partes SOMENTE quando o assunto se quebra em
+  temas ou especialidades distintas, um tema por parte. Exemplo: "crie uma landing page" vira layout e identidade visual,
+  conteúdo e textos, e criação do HTML. Não divida só porque a tarefa é grande, nem em etapas do mesmo tema.
+  Cada parte é um objeto {{"title": "nome do tema", "prompt": "...", "effort": 1, "model": "nome"}} com um prompt completo e
+  autossuficiente (o subagente não vê a demanda original): diga o objetivo geral, o que cabe a ele e quais arquivos ele deve
+  criar ou alterar, de modo que dois subagentes não escrevam no mesmo arquivo. Esforço e modelo são próprios de cada parte.
 
 Modelos disponíveis, do mais barato ao mais caro:
 {menu}

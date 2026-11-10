@@ -490,6 +490,12 @@ def _orchestrate(job, cwd, title, prompt, plan, model, seed, paths):
             dec = {"effort": None, "model": model, "reason": "", "parts": [], "error": office.clip(str(e), 120)}
         units = dec["parts"] or [{"title": "", "prompt": prompt, "effort": dec["effort"], "model": dec["model"]}]
         n, sessions, errors = len(units), [], []
+        if n > 1:  # cada subagente sabe qual é o seu tema e o que ficou com os colegas
+            for i, u in enumerate(units):
+                others = "; ".join(o["title"] or f"parte {k + 1}" for k, o in enumerate(units) if k != i)
+                u["prompt"] += (f"\n\n[Gerente] Você é o subagente {i + 1} de {n} desta demanda e cuida só do tema "
+                                f"\"{u['title'] or i + 1}\". Os outros temas ({others}) estão com colegas trabalhando em paralelo "
+                                "na mesma pasta: não refaça o trabalho deles nem altere os arquivos deles.")
         for i, u in enumerate(units, 1):
             name = office.clip(f"{title or 'Demanda'} · {u['title'] or i}", 60) if n > 1 else title
             routed = {"effort": u["effort"], "requested": model, "reason": dec.get("reason") or "", "part": [i, n] if n > 1 else None}

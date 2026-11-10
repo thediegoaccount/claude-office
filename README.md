@@ -158,7 +158,7 @@ O gerente faz a **triagem** de cada demanda nova antes de alguém começar a tra
 
 1. **Mede o esforço** da demanda, de 1 (trivial) a 5 (máximo).
 2. **Confere o modelo**: escolhe o mais barato que dá conta. Se você pediu Opus para uma pergunta simples, ele troca por Haiku; se pediu Haiku para uma depuração difícil, ele sobe.
-3. **Divide em até 4 subagentes**, só quando as partes são independentes e não mexem nos mesmos arquivos. Cada subagente recebe um prompt próprio, tem o esforço medido e pode usar um modelo diferente.
+3. **Divide em até 4 subagentes**, só quando o assunto se quebra em temas distintos, um tema por subagente (ex.: uma landing page vira layout, conteúdo e criação do HTML). Tarefa grande de um tema só não é dividida. Cada subagente recebe um prompt próprio, sabe quais temas ficaram com os colegas, tem o esforço medido e pode usar um modelo diferente.
 
 A decisão aparece no balão do gerente, num aviso amarelo, no Chatlog (etiqueta GERENTE) e no painel do agente ("gerente: esforço 2/5 · subagente 1 de 3 · pedido: Opus").
 
