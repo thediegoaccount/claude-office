@@ -392,8 +392,18 @@
     for (const s of sessions) { if (s.desk != null && !occ[s.desk]) occ[s.desk] = s; else s.desk = null; }
     const planning = (a) => { const p = avatars.get(a.parent); return !!p && inPlan(p); };
     for (const a of subs) { if (isActive(a) && !planning(a) && a.desk != null && !occ[a.desk]) occ[a.desk] = a; else a.desk = null; }
-    // Agentes criados pelo escritório (Novo Especialista, biblioteca, gerente) trabalham no Startup Lab; os demais, na sala principal.
-    const home = (s) => (s.data && s.data.origin === "office" ? "annex" : "main");
+    // Agentes criados pelo escritório (Novo Especialista, biblioteca, gerente) se alternam entre o Startup Lab e a sala principal;
+    // sessões abertas por fora ficam na sala principal. A sala de cada um é sorteada uma vez e não muda mais.
+    const mine = (s) => !!(s.data && s.data.origin === "office");
+    const home = (s) => {
+      if (!mine(s)) return "main";
+      if (!s.home) {
+        const n = { annex: 0, main: 0 };
+        for (const o of sessions) if (o.home && mine(o)) n[o.home]++;
+        s.home = n.annex <= n.main ? "annex" : "main";
+      }
+      return s.home;
+    };
     const find = (pred) => { for (let i = 0; i < DESKS.length; i++) if (pred(i)) return i; return -1; };
     for (const s of sessions) {
       const isMain = (i) => DESKS[i].room === home(s);
@@ -1603,7 +1613,7 @@
         const [tx, ty] = iso((ANNEX_X + W) / 2, H / 2);
         ctx.textAlign = "center"; ctx.fillStyle = `rgba(230,230,255,${0.9 * (1 - 2 * lv)})`;
         ctx.font = "bold 16px Verdana"; ctx.fillText("Startup Lab · luz apagada", tx, ty);
-        ctx.font = "11px Verdana"; ctx.fillText("acende quando chega um agente criado pelo escritório", tx, ty + 18);
+        ctx.font = "11px Verdana"; ctx.fillText("acende quando um agente criado pelo escritório senta aqui", tx, ty + 18);
         ctx.textAlign = "left";
       }
     }
@@ -1968,9 +1978,13 @@
       if (job.warning) toast(job.warning, "yellow");
     } catch (e) { toast(e.message, "red"); }
   }
-  function jobsFinished(wasRunning) {
+  function jobsFinished() {
+    const first = !S.seenJobs;
+    S.seenJobs = S.seenJobs || new Set();
     for (const job of S.jobs) {
-      if (job.running || !wasRunning.has(job.id) || job.kind === "triage" || job.cancelled) continue;
+      if (job.running || S.seenJobs.has(job.id)) continue;
+      S.seenJobs.add(job.id);
+      if (first || job.kind === "triage" || job.cancelled) continue;
       const mine = S.readWait && S.readWait.id === job.id;
       if (mine) S.readWait = null;
       if (!job.output && !mine) continue;
@@ -2123,10 +2137,9 @@
   async function refreshCli(recheck) {
     if (S.state && S.state.demo) { S.cli = { demo: true, available: false, logged_in: false, workspaces: [], jobs: [] }; renderCli(); return; }
     try {
-      const wasRunning = new Set((S.jobs || []).filter((j) => j.running).map((j) => j.id));
       S.cli = await api(`/api/cli/status${recheck ? "?recheck=1" : ""}`);
       S.jobs = S.cli.jobs || [];
-      jobsFinished(wasRunning);
+      jobsFinished();
       if (S.cli.logged_in) S.loginUntil = 0;
     } catch (e) { S.cli = { available: false, logged_in: false, auth_state: "error", auth_message: e.message, workspaces: [], jobs: [] }; }
     renderCli();
@@ -2420,7 +2433,7 @@
       if (clk) { clk.textContent = `offline: ${e.message}`; clk.classList.add("off"); }
       renderDiag();
     }
-    if (S.jobs.some((j) => j.running)) refreshCli();
+    if (S.jobs.some((j) => j.running) || ((S.state && S.state.agents) || []).some((a) => a.busy) || (S.state && S.state.manager && S.state.manager.busy)) refreshCli();
   }
 
   function bind() {
@@ -2479,7 +2492,7 @@
     $("readCopy").onclick = () => { if (S.readText) copyText(S.readText); };
     $("readSend").onclick = sendRead;
     $("readText").addEventListener("keydown", (ev) => { if (ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); sendRead(); } });
-    $("readAuto").checked = store.get("office.autoread", "0") === "1";
+    $("readAuto").checked = store.get("office.autoread", "1") === "1";
     $("readAuto").onchange = () => store.set("office.autoread", $("readAuto").checked ? "1" : "0");
     $("dlgRead").addEventListener("click", (ev) => { if (ev.target === $("dlgRead")) closeReader(); });
     doc.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && $("dlgRead").classList.contains("open")) closeReader(); });
