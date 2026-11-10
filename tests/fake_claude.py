@@ -55,6 +55,9 @@ def main():
         for d in ({"type": "system", "subtype": "init"}, msg, {"type": "result", "subtype": "success"}):
             print(json.dumps(d))
         return 0
+    if "--no-session-persistence" in args:  # pergunta avulsa do gerente (triagem)
+        print(json.dumps({"type": "result", "subtype": "success", "is_error": False, "result": os.environ.get("FAKE_TRIAGE", "sem json")}))
+        return 0
     log = os.environ.get("FAKE_LOG")
     if log:
         with open(log, "a", encoding="utf-8") as fh:

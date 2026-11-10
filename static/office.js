@@ -650,6 +650,8 @@
   function managerPhrase() {
     if (manager.say) return manager.say;
     const st = S.state;
+    if (st && st.manager && st.manager.busy) return "Medindo o esforço da demanda…";
+    if (manager.note && manager.note.until > nowS()) return manager.note.text;
     if (!st) return "carregando o escritório…";
     const ag = st.agents || [];
     const n = (s) => ag.filter((a) => a.status === s).length;
@@ -1767,6 +1769,12 @@
     if (!state) return;
     if (TEST && state.now) clock.t = state.now;
     else if (state.now) clock.offset = state.now - Date.now() / 1000;
+    const decs = (state.manager && state.manager.decisions) || [];
+    if (decs.length && S.lastDecision != null && decs[0].ts > S.lastDecision) {
+      toast("Gerente · " + decs[0].text, "yellow");
+      manager.note = { text: decs[0].text, until: nowS() + 12 };
+    }
+    S.lastDecision = decs.length ? decs[0].ts : S.lastDecision == null ? 0 : S.lastDecision;
     S.state = state;
     S.stateAt = nowS();
     syncAvatars(state.agents || []);
@@ -1855,6 +1863,7 @@
       <div class="meta"><span><i class="dot" style="background:${STATUS_COLORS[a.status]}"></i>${STATUS_LABEL[a.status]}</span> · última atividade há ${ago(a.last_activity_at)}</div>
       <div class="meta">${esc(modelShort(a.model))}${a.effort ? " · " + esc(a.effort) : ""} <b style="color:${LEVEL_COLORS[lv - 1]}">${"$".repeat(lv)}</b>${mc ? ` · média ${unitFmt(mc, unit)} ${unitIcon(unit)}/sessão` : ""}</div>
       ${avatars.get(a.id) && avatars.get(a.id).arch ? `<div class="meta">personagem: <i>${esc(avatars.get(a.id).arch.nick)}</i></div>` : ""}
+      ${a.routed ? `<div class="meta">gerente: ${a.routed.effort ? `esforço ${a.routed.effort}/5` : "sem triagem"}${a.routed.part ? ` · subagente ${a.routed.part[0]} de ${a.routed.part[1]}` : ""}${a.routed.requested !== a.model && a.routed.requested ? ` · pedido: ${esc(modelShort(a.routed.requested))}` : ""}${a.routed.reason ? ` · ${esc(a.routed.reason)}` : ""}</div>` : ""}
       <div class="meta mono">${esc(a.id)}${a.mode ? " · " + esc(a.mode) : ""}</div><div class="meta">pasta: ${esc(a.workspace || "?")}</div>`;
     const p = (S.state.pending || []).find((x) => x.session === a.id);
     $("detPerm").innerHTML = p ? `<div class="perm"><b>${esc(toolLabel(p.tool))} pede permissão</b><pre>${esc(p.detail)}</pre>
@@ -2225,6 +2234,7 @@
     if (it && it.cwd) $("libCwd").value = it.cwd;
     $("libModel").value = (it && it.model) || "";
     $("libKind").value = s.kind || "off";
+    $("libOrch").checked = !!(it && it.orchestrate);
     $("libTime").value = s.time || "09:00";
     DAYS.forEach((_, d) => { $("libDay" + d).checked = s.days ? s.days.includes(d) : d < 5; });
     const every = s.every_minutes || 60, hours = every % 60 === 0;
@@ -2242,7 +2252,7 @@
       : kind === "interval" ? { kind, every_minutes: Math.round(+$("libEvery").value * +$("libUnit").value) } : { kind: "off" };
     try {
       await api("/api/library/save", { id: libEditing && libEditing.id, name: $("libName").value.trim(), prompt: $("libPrompt").value, cwd: $("libCwd").value,
-        model: $("libModel").value || null, look_seed: libSeed, schedule, enabled: libEditing ? libEditing.enabled || libEditing.schedule.kind === "off" : true });
+        model: $("libModel").value || null, look_seed: libSeed, orchestrate: $("libOrch").checked, schedule, enabled: libEditing ? libEditing.enabled || libEditing.schedule.kind === "off" : true });
       closeLibForm(); toast("Herói salvo na biblioteca"); loadLib();
     } catch (e) { toast(e.message, "red"); }
   }
@@ -2251,7 +2261,7 @@
     if (!it) return;
     try {
       if (action === "edit") return openLibForm(it);
-      if (action === "run") { const job = await api("/api/library/run", { id }); S.jobs.unshift(job); toast(`'${it.name}' chamado; ele entra pela porta em instantes`); }
+      if (action === "run") { const job = await api("/api/library/run", { id }); S.jobs.unshift(job); toast(job.kind === "triage" ? `'${it.name}' entregue ao gerente; ele está medindo o esforço` : `'${it.name}' chamado; ele entra pela porta em instantes`); }
       else if (action === "toggle") await api("/api/library/save", { ...it, enabled: !it.enabled });
       else if (action === "del") { if (!window.confirm || window.confirm(`Excluir '${it.name}' da biblioteca?`)) await api("/api/library/delete", { id }); else return; }
     } catch (e) { toast(e.message, "red"); }
@@ -2262,7 +2272,7 @@
     const prompt = $("newPrompt").value.trim(), name = $("newTitle").value.trim();
     if (!name || !prompt) return toast("Preencha o nome e a primeira mensagem para salvar", "red");
     try {
-      await api("/api/library/save", { name, prompt, cwd: $("newCwd").value, model: $("newModel").value || null, look_seed: nextSeed, schedule: { kind: "off" } });
+      await api("/api/library/save", { name, prompt, cwd: $("newCwd").value, model: $("newModel").value || null, look_seed: nextSeed, orchestrate: $("newOrch").checked, schedule: { kind: "off" } });
       toast("Salvo na biblioteca; abra a Biblioteca (botão acima do Novo Especialista) para agendar");
     } catch (e) { toast(e.message, "red"); }
   }
@@ -2273,6 +2283,7 @@
     $("newCwd").innerHTML = (c.workspaces || []).map((w) => `<option>${esc(w)}</option>`).join("") || `<option value="">(nenhuma pasta em workspace_roots)</option>`;
     fillModels($("newModel"), "padrão do CLI");
     $("newModel").value = store.get("office.model", "");
+    $("newOrch").checked = store.get("office.orch", "1") !== "0";
     newModelChanged();
     $("newCli").textContent = `${c.version || "versão ?"} · ${c.path || "claude não encontrado"}`;
     images.new = []; renderTray("new");
@@ -2287,11 +2298,12 @@
     const title = $("newTitle").value.trim();
     try {
       store.set("office.model", $("newModel").value);
-      const job = await api("/api/cli/new", { cwd: $("newCwd").value, title, prompt, plan, model: $("newModel").value || null, look_seed: nextSeed, images: images.new });
+      const job = await api("/api/cli/new", { cwd: $("newCwd").value, title, prompt, plan, model: $("newModel").value || null, look_seed: nextSeed, images: images.new, orchestrate: $("newOrch").checked });
+      store.set("office.orch", $("newOrch").checked ? "1" : "0");
       S.jobs.unshift(job);
       modal("dlgNew", false);
       $("newPrompt").value = ""; $("newTitle").value = ""; images.new = [];
-      toast(`Especialista '${title || "sem nome"}' chamado; ele entra pela porta em instantes`);
+      toast(job.kind === "triage" ? "Demanda entregue ao gerente; ele está medindo o esforço" : `Especialista '${title || "sem nome"}' chamado; ele entra pela porta em instantes`);
       newSeed();
     } catch (e) { toast(e.message, "red"); }
   }

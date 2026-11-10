@@ -152,6 +152,28 @@ Teste manual do fluxo de permissão, com o servidor rodando: `python tests\e2e_p
 - **O balão de permissão não aparece**: instale o hook, abra uma sessão **nova** e confira `office_permission.log`. O escritório precisa estar aberto no navegador.
 - **CLI: conectar / expirado**: clique no selo para fazer login. Se o `claude` não for encontrado, defina `claude_bin` no `office.config.json` ou a variável `CLAUDE_BIN`.
 
+## Gerente orquestrador
+
+O gerente faz a **triagem** de cada demanda nova antes de alguém começar a trabalhar. Com a opção "Passar pelo gerente" marcada (no Novo Especialista ou na ficha da biblioteca), ele:
+
+1. **Mede o esforço** da demanda, de 1 (trivial) a 5 (máximo).
+2. **Confere o modelo**: escolhe o mais barato que dá conta. Se você pediu Opus para uma pergunta simples, ele troca por Haiku; se pediu Haiku para uma depuração difícil, ele sobe.
+3. **Divide em até 4 subagentes**, só quando as partes são independentes e não mexem nos mesmos arquivos. Cada subagente recebe um prompt próprio, tem o esforço medido e pode usar um modelo diferente.
+
+A decisão aparece no balão do gerente, num aviso amarelo, no Chatlog (etiqueta GERENTE) e no painel do agente ("gerente: esforço 2/5 · subagente 1 de 3 · pedido: Opus").
+
+Configuração em `office.config.json`:
+
+```json
+"orchestrator": { "enabled": true, "model": "haiku", "max_parts": 4 }
+```
+
+- `model` é quem faz a triagem. O padrão é `haiku`; um modelo externo (ex.: `gemini/gemini-2.5-flash`) deixa a triagem sem custo de tokens do Claude.
+- O gerente só escolhe entre `haiku`, `sonnet`, `opus`, os modelos de `models` e os externos com chave. Externos só entram para perguntas que não dependem do projeto.
+- Se a triagem falhar (sem login, resposta inválida), a demanda segue com o modelo pedido e o motivo fica registrado.
+
+Limites: a triagem é uma **estimativa** feita por um modelo barato a partir do texto da demanda, não uma medição do trabalho real, e custa uma chamada curta a mais. Ela vale para demandas novas; comandos enviados a uma sessão já aberta não passam pelo gerente. Os subagentes são sessões independentes na mesma pasta: ninguém junta os resultados no final.
+
 ## Biblioteca de agentes e agendamentos
 
 O botão **📚 Biblioteca e agendamentos** (acima do Novo Especialista) guarda agentes prontos: nome, pasta, modelo e instrução. Criar um agente abre uma **ficha de personagem de RPG**: retrato com "Sortear aparência", classe (o modelo), reino (a pasta), missão (a instrução) e rotina (o agendamento). Os atributos Poder, Velocidade e Custo são ilustrativos. Também dá para usar **Salvar na biblioteca** no diálogo do Novo Especialista.

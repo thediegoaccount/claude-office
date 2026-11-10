@@ -184,3 +184,5 @@ label select, label input, label textarea { margin-top: 3px; }
 .rpgSub input[type=time] { width: 110px; } .rpgSub input[type=number] { width: 70px; } .rpgSub select { width: auto; }
 .days input { width: auto; margin: 0; box-shadow: none; }
 @media (max-width: 620px) { .rpgGrid { grid-template-columns: 1fr; } }
+label.check { display: flex; gap: 6px; align-items: center; }
+label.check input { width: auto; margin: 0; box-shadow: none; }

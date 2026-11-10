@@ -15,6 +15,7 @@ from datetime import datetime
 from pathlib import Path
 
 import office
+import orchestrator
 import providers
 
 BASE = Path(__file__).resolve().parent
@@ -56,7 +57,7 @@ def _desktop():
 
 def defaults():
     return {"workspace_roots": [str(_desktop() / "git")], "claude_bin": "", "permission_mode": "default",
-            "budget_unit": "usd", "monthly_budget": 100, "cycle_start_day": 1, "prices": {}, "models": [], "providers": {}}
+            "budget_unit": "usd", "monthly_budget": 100, "cycle_start_day": 1, "prices": {}, "models": [], "providers": {}, "orchestrator": {}}
 
 
 def _raw():
@@ -180,7 +181,8 @@ def cli_info():
             return {"available": False, "path": path, "version": None, "flags": {}, "modes": []}
         m = re.search(r"--permission-mode.*?\(choices:([^)]*)\)", help_text, re.DOTALL)
         modes = re.findall(r'"([A-Za-z]+)"', m.group(1)) if m else []
-        flags = {f: f in help_text for f in ("--session-id", "--name", "--permission-mode", "--output-format", "--model", "--resume")}
+        flags = {f: f in help_text for f in ("--session-id", "--name", "--permission-mode", "--output-format", "--model", "--resume",
+                                                    "--no-session-persistence")}
         return {"available": True, "path": path, "version": ver, "flags": flags, "modes": modes}
     info = _cached("info", 600, go)
     if not info["available"]:
@@ -434,25 +436,19 @@ def _chat_text(prompt, paths):
     return prompt
 
 
-def new_session(cwd, title, prompt, plan=False, model=None, look_seed=None, images=None):
+def _launch(cwd, title, prompt, plan, model, seed, paths, routed=None):
+    """Abre uma sessão nova (CLI do Claude ou conversa com provedor externo) com os dados já validados."""
+    meta = {"title": title, "origin": "office", "created": time.time(), "look_seed": seed, "routed": routed}
     if providers.is_external(model, config()):
-        title = office.clip(title or "", 60)
-        seed = look_seed if isinstance(look_seed, str) and SEED_RE.match(look_seed) else None
-        paths = save_images(images)
-        text = _chat_text(prompt, paths)
         sid = str(uuid.uuid4())
-        _save_name(sid, {"title": title, "origin": "office", "created": time.time(), "look_seed": seed})
+        _save_name(sid, meta)
         providers.add_title(sid, title)
-        providers.add_user(sid, text, str(Path(cwd).resolve()) if cwd and _inside_roots(cwd) else None, len(paths))
+        providers.add_user(sid, _chat_text(prompt, paths), str(Path(cwd).resolve()) if cwd and _inside_roots(cwd) else None, len(paths))
         return _start("new", sid, None, None, None, title, model, paths, chat=True)
     if not find_claude():
         raise RuntimeError("claude não encontrado")
     if not cwd or not _inside_roots(cwd):
         raise PermissionError("a pasta precisa estar dentro de workspace_roots")
-    title = office.clip(title or "", 60)
-    model = _check_model(model)
-    seed = look_seed if isinstance(look_seed, str) and SEED_RE.match(look_seed) else None
-    paths = save_images(images)
     mode_args, prefix = _mode_args(plan)
     info = cli_info()
     sid = str(uuid.uuid4())
@@ -460,8 +456,77 @@ def new_session(cwd, title, prompt, plan=False, model=None, look_seed=None, imag
     if title and info["flags"].get("--name"):
         args += ["-n", title]
     args += mode_args + (["--model", model] if model else []) + ["--output-format", "json"]
-    _save_name(sid, {"title": title, "origin": "office", "created": time.time(), "look_seed": seed})
+    _save_name(sid, meta)
     return _start("new", sid, args, str(Path(cwd).resolve()), build_prompt(prompt, prefix, paths), title, model, paths)
+
+
+def _ask(model, text):
+    """Pergunta avulsa ao modelo de triagem do gerente; não cria sessão no escritório."""
+    if providers.is_external(model, config()):
+        return providers.complete(config(), model, [{"role": "user", "content": text}])
+    path = find_claude()
+    if not path:
+        raise RuntimeError("claude não encontrado")
+    keep = ["--no-session-persistence"] if cli_info()["flags"].get("--no-session-persistence") else []
+    r = subprocess.run(_argv(path) + ["-p", "--model", model, "--output-format", "json"] + keep, input=text, capture_output=True,
+                       text=True, encoding="utf-8", errors="replace", timeout=180, cwd=tempfile.gettempdir(),
+                       creationflags=NO_WINDOW, check=False)
+    try:
+        d = json.loads(r.stdout)
+    except ValueError:
+        raise RuntimeError(_explain((r.stdout or "") + (r.stderr or ""), r.returncode)) from None
+    if not isinstance(d, dict) or d.get("is_error"):
+        raise RuntimeError(_explain(str(d), r.returncode))
+    return str(d.get("result") or "")
+
+
+def _orchestrate(job, cwd, title, prompt, plan, model, seed, paths):
+    """O gerente mede o esforço, escolhe o modelo e, se valer a pena, divide a demanda em até 4 subagentes."""
+    orchestrator.set_busy(1)
+    try:
+        try:
+            dec = orchestrator.triage(config(), prompt, model, _ask, bool(paths))
+        except Exception as e:  # noqa: BLE001 - sem triagem, a demanda segue como foi pedida
+            dec = {"effort": None, "model": model, "reason": "", "parts": [], "error": office.clip(str(e), 120)}
+        units = dec["parts"] or [{"title": "", "prompt": prompt, "effort": dec["effort"], "model": dec["model"]}]
+        n, sessions, errors = len(units), [], []
+        for i, u in enumerate(units, 1):
+            name = office.clip(f"{title or 'Demanda'} · {u['title'] or i}", 60) if n > 1 else title
+            routed = {"effort": u["effort"], "requested": model, "reason": dec.get("reason") or "", "part": [i, n] if n > 1 else None}
+            part_seed = (f"{seed}-{i}"[:40] if seed else None) if n > 1 else seed
+            for choice in dict.fromkeys([u["model"], model]):
+                try:
+                    sessions.append(_launch(cwd, name, u["prompt"], plan, choice, part_seed, paths if n == 1 else [], routed)["session"])
+                    break
+                except Exception as e:  # noqa: BLE001 - tenta o modelo pedido antes de desistir
+                    last = str(e)
+            else:
+                errors.append(f"{name or 'demanda'}: {last}")
+        entry = orchestrator.record(title, model, dec)
+        job.update(output=entry["text"], sessions=sessions, error="; ".join(errors) or None, exit_code=1 if errors else 0)
+    finally:
+        orchestrator.set_busy(-1)
+        job.update(running=False, finished=time.time())
+
+
+def new_session(cwd, title, prompt, plan=False, model=None, look_seed=None, images=None, orchestrate=False):
+    title = office.clip(title or "", 60)
+    model = _check_model(model)
+    seed = look_seed if isinstance(look_seed, str) and SEED_RE.match(look_seed) else None
+    external = providers.is_external(model, config())
+    if not external and (not cwd or not _inside_roots(cwd)):
+        raise PermissionError("a pasta precisa estar dentro de workspace_roots")
+    paths = save_images(images)
+    _chat_text(prompt, paths)
+    if not (orchestrate and orchestrator.settings(config())["enabled"]):
+        return _launch(cwd, title, prompt, plan, model, seed, paths)
+    job = {"id": uuid.uuid4().hex[:12], "kind": "triage", "session": "__manager", "title": title, "model": model, "images": len(paths),
+           "started": time.time(), "finished": None, "exit_code": None, "error": None, "output": "", "incomplete": False,
+           "cancelled": False, "running": True}
+    with _lock:
+        _jobs[job["id"]] = job
+    threading.Thread(target=_orchestrate, args=(job, cwd, title, prompt, plan, model, seed, paths), daemon=True).start()
+    return public(job)
 
 
 def send(session_id, prompt, plan=False, model=None, images=None):

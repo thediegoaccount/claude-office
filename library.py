@@ -109,7 +109,8 @@ def save(data):
             cur["look_seed"] = seed
         enabled = bool(data.get("enabled", True)) and schedule["kind"] != "off"
         changed = schedule != cur.get("schedule") or enabled != cur.get("enabled")
-        cur.update(name=name, prompt=prompt, model=model, cwd=cwd, schedule=schedule, enabled=enabled)
+        cur.update(name=name, prompt=prompt, model=model, cwd=cwd, schedule=schedule, enabled=enabled,
+                   orchestrate=bool(data.get("orchestrate")))
         if changed or "next_run" not in cur:
             cur["next_run"] = next_run(schedule, now) if enabled else None
         _save(all_items)
@@ -141,7 +142,8 @@ def run(item_id, scheduled=False):
     if not it:
         raise LookupError("agente não encontrado na biblioteca")
     try:
-        job = cli_bridge.new_session(it.get("cwd"), it["name"], it["prompt"], False, it.get("model"), it.get("look_seed"))
+        job = cli_bridge.new_session(it.get("cwd"), it["name"], it["prompt"], False, it.get("model"), it.get("look_seed"),
+                                     orchestrate=bool(it.get("orchestrate")))
     except Exception as e:
         _mark(item_id, last_error=office.clip(str(e), 200), last_run=time.time())
         raise

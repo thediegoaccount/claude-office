@@ -72,6 +72,7 @@
     <label>Nome do bonequinho (título)<input id="newTitle" maxlength="60" placeholder="ex.: ESPECIALISTA EM TESTES"></label>
     <label>Modelo<select id="newModel"></select></label>
     <label>Primeira mensagem<textarea id="newPrompt" rows="5" placeholder="O que ele deve fazer? (Ctrl+V cola imagem)"></textarea></label>
+    <label class="check"><input type="checkbox" id="newOrch" checked>Passar pelo gerente: ele mede o esforço, ajusta o modelo e pode dividir em até 4 subagentes</label>
     <div id="newTray" class="tray"></div>
     <p id="newCli" class="meta mono"></p>
     <p class="meta">Ações que pedem permissão aparecem no balão PERMITIR (40s).</p>
@@ -102,6 +103,7 @@
           <label>Reino (pasta de trabalho)<select id="libCwd"></select></label>
           <label>Missão (instrução)<textarea id="libPrompt" rows="4" placeholder="O que ele deve fazer a cada execução?"></textarea></label>
           <label>Rotina (agendamento)<select id="libKind"><option value="off">Sob chamado (só manual)</option><option value="daily">Ritual em dias e horário fixos</option><option value="interval">Patrulha a cada intervalo</option></select></label>
+          <label class="check"><input type="checkbox" id="libOrch">Passar pelo gerente (mede o esforço, ajusta o modelo e pode dividir em até 4)</label>
           <div id="libDaily" class="rpgSub" hidden>
             <input id="libTime" type="time" value="09:00">
             <span id="libDays" class="days">
