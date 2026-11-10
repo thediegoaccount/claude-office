@@ -68,7 +68,7 @@ Copie `office.config.example.json` para `office.config.json` e ajuste `workspace
 | Personagens | cada boneco ganha um arquétipo de escritório (o fazendeiro de beterraba, o rei das pegadinhas, a contadora dos gatos…) com visual e falas próprias |
 | Mascote laranja de pixel | sessão com **modelo da Anthropic** (ou o padrão do CLI): o boneco vira o mascote, com acessórios sorteados pela semente (peruca, boné, cartola, fones, óculos, gravata, cachecol, caneca de café…). Outros modelos continuam como pessoas |
 | Efeitos | confete quando alguém termina, faíscas quando nasce um subagente, "zzz" de quem cochila, poeira nos feixes de luz e anel pulsante no selecionado |
-| Startup Lab | anexo que acende quando o escritório lota (mais de 12 sessões) |
+| Startup Lab | onde trabalham os agentes **criados pelo escritório** (Novo Especialista, biblioteca e subagentes do gerente); acende quando chega o primeiro. Sessões abertas por fora ficam na sala principal, e cada sala transborda para a outra quando lota |
 | Céu nas janelas / escuridão | segue a hora do computador: dia, entardecer (17h30–19h) e noite. À noite só ficam acesas as telas dos computadores ocupados e poucas luzes. Para testar: `http://127.0.0.1:8777/?hora=22` |
 | Barra de vida (topo) | quanto resta dos limites do plano Claude (sessão de 5 h e semana), com o horário de reinício |
 

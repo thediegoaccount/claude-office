@@ -392,9 +392,11 @@
     for (const s of sessions) { if (s.desk != null && !occ[s.desk]) occ[s.desk] = s; else s.desk = null; }
     const planning = (a) => { const p = avatars.get(a.parent); return !!p && inPlan(p); };
     for (const a of subs) { if (isActive(a) && !planning(a) && a.desk != null && !occ[a.desk]) occ[a.desk] = a; else a.desk = null; }
-    const isMain = (i) => DESKS[i].room === "main";
+    // Agentes criados pelo escritório (Novo Especialista, biblioteca, gerente) trabalham no Startup Lab; os demais, na sala principal.
+    const home = (s) => (s.data && s.data.origin === "office" ? "annex" : "main");
     const find = (pred) => { for (let i = 0; i < DESKS.length; i++) if (pred(i)) return i; return -1; };
     for (const s of sessions) {
+      const isMain = (i) => DESKS[i].room === home(s);
       if (s.desk != null && isMain(s.desk)) continue;
       let i = find((k) => isMain(k) && !occ[k]);
       if (i < 0) i = find((k) => isMain(k) && occ[k] && occ[k].kind === "subagent");
@@ -1601,7 +1603,7 @@
         const [tx, ty] = iso((ANNEX_X + W) / 2, H / 2);
         ctx.textAlign = "center"; ctx.fillStyle = `rgba(230,230,255,${0.9 * (1 - 2 * lv)})`;
         ctx.font = "bold 16px Verdana"; ctx.fillText("Startup Lab · luz apagada", tx, ty);
-        ctx.font = "11px Verdana"; ctx.fillText("acende quando o escritório lotar (mais de 12 agentes)", tx, ty + 18);
+        ctx.font = "11px Verdana"; ctx.fillText("acende quando chega um agente criado pelo escritório", tx, ty + 18);
         ctx.textAlign = "left";
       }
     }
