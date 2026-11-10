@@ -153,6 +153,17 @@
     { key: "warehouse", nick: "o do armazém", look: { torso: "plain", hairStyle: "cap", accent: "#e67e22", shirt: "#2980b9" },
       lines: ["Subi o container no braço.", "Calma, pessoal.", "No armazém isso já tava pronto."] },
   ];
+  // Modelos da Anthropic (ou o padrão do CLI) viram o mascote; os demais continuam como pessoas.
+  const isAnthropic = (m) => !m || /claude|anthropic|opus|sonnet|haiku|fable|mythos/i.test(String(m));
+  const CRITTER_HEADS = ["long", null, "cap", "curly", "phones", "bob", "top", null, "beanie", "mohawk", "long", "party", "curly"];
+  const CRITTER_GLASSES = [null, null, "round", null, "shades", null];
+  const CRITTER_NECKS = [null, "tie", null, "bow", null, "scarf", null];
+  function critterLook(seed) {
+    const h = hashStr(`critter:${seed}`), base = lookFor(seed);
+    return { kind: "critter", body: "#d97757", shirt: base.shirt, hair: base.hair, accent: base.accent, head: CRITTER_HEADS[h % CRITTER_HEADS.length],
+      glasses: CRITTER_GLASSES[(h >>> 7) % CRITTER_GLASSES.length], neck: CRITTER_NECKS[(h >>> 12) % CRITTER_NECKS.length], coffee: (h >>> 17) % 3 === 0 };
+  }
+  const lookOf = (seed, model, arch) => (isAnthropic(model) ? critterLook(seed) : { ...lookFor(seed), ...(arch ? arch.look : null) });
   const archetypeFor = (seed) => ARCHETYPES[hashStr(`arch:${seed}`) % ARCHETYPES.length];
   const LINES = {
     working: ["bora!", "compilou de primeira 😎", "quem escreveu isso? ah, fui eu", "testes verdes, alma leve", "mais um café e eu termino"],
@@ -348,7 +359,7 @@
         last: a.last_activity_at, created: a.created_at || 0, data: a, leaving: false });
       const seed = a.look_seed || a.id;
       av.arch = archetypeFor(seed);
-      av.look = { ...lookFor(seed), ...av.arch.look };
+      av.look = lookOf(seed, a.model, av.arch);
       if (!S.first && was && isActive({ status: was }) && (a.status === "waiting" || a.status === "done")) {
         burst(av, "confetti");
         react(av, a.kind === "subagent" ? "Entregue! ✔" : "Feito! ✔");
@@ -1425,9 +1436,10 @@
     const w = spr.width * sc, h = spr.height * sc * (1 - 0.05 * av.sitT);
     ctx.fillStyle = "rgba(0,0,0,.25)";
     ctx.beginPath(); ctx.ellipse(px, py, 14 * sc / 2, 6 * sc / 2, 0, 0, Math.PI * 2); ctx.fill();
+    const skip = (spr.headTop || 0) * sc, hv = h - skip;
     if (av.kind === "subagent") {
       ctx.fillStyle = "rgba(214,179,255,.35)";
-      ctx.beginPath(); ctx.ellipse(px, py - h / 2, w * 0.7, h * 0.6, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(px, py - hv / 2, w * 0.7, hv * 0.6, 0, 0, Math.PI * 2); ctx.fill();
     }
     if (S.selected === av.id) {
       const pulse = 1 + 0.15 * Math.sin(nowS() * 5);
@@ -1440,8 +1452,8 @@
       ctx.fillStyle = "#111"; ctx.fillRect(px + 11, top + 14, 6, 18);
       ctx.fillStyle = "#2d3436"; ctx.fillRect(px + 9, top + 12, 10, 4); ctx.fillRect(px + 9, top + 30, 10, 4);
     }
-    av.headX = px; av.headY = top + window.Sprites.TOP * sc;
-    av.hit = [px - w / 2, top, w, h];
+    av.headX = px; av.headY = top + (spr.headTop != null ? spr.headTop : window.Sprites.TOP) * sc;
+    av.hit = [px - w / 2, top + skip, w, hv];
   }
 
   // ---------- dia e noite ----------
@@ -2117,13 +2129,16 @@
   let nextSeed = "";
   function newSeed() {
     nextSeed = `p-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    drawFace();
+  }
+  function drawFace() {
     const cv = $("newFace");
     if (!cv || !window.Sprites) return;
     const c = cv.getContext("2d");
     c.imageSmoothingEnabled = false;
     c.clearRect(0, 0, cv.width, cv.height);
-    const spr = window.Sprites.build(lookFor(nextSeed), "stand", 0);
-    c.drawImage(spr, 0, 0, 24, 33, 0, 0, 40, 55);
+    const spr = window.Sprites.build(lookOf(nextSeed, $("newModel").value), "stand", 0);
+    c.drawImage(spr, 0, spr.headTop != null ? spr.height - 33 : 0, 24, 33, 0, 0, 40, 55);
   }
 
   async function openNew() {
@@ -2137,6 +2152,7 @@
     $("newCwd").innerHTML = (c.workspaces || []).map((w) => `<option>${esc(w)}</option>`).join("") || `<option value="">(nenhuma pasta em workspace_roots)</option>`;
     fillModels($("newModel"), "padrão do CLI");
     $("newModel").value = store.get("office.model", "");
+    drawFace();
     $("newCli").textContent = `${c.version || "versão ?"} · ${c.path || "claude não encontrado"}`;
     images.new = []; renderTray("new");
     modal("dlgNew", true);
@@ -2316,6 +2332,7 @@
     resize();
     bind();
     newSeed();
+    $("newModel").addEventListener("change", drawFace);
     const sala = { escritorio: "office", lab: "annex", lazer: "fun", geral: "overview" }[(/[?&]sala=([a-z]+)/.exec(window.location.search || "") || [])[1]];
     if (sala) setRoom(sala, true);
     try { S.token = (await api("/api/token")).token; } catch (e) { S.token = null; }
@@ -2329,7 +2346,7 @@
 
   window.__office = {
     manager, avatars, seats, seatFor, seatTarget, cam, setRoom, toView, fromView, viewSize, route, OBSTACLES, DESKS, update, step, evaluate,
-    freePoint, segmentFree, roomOf, nearestFree, nearSpot, subSpot, view, debugScale: (k) => { view.scale = k; roomCache = null; }, nightLevel, FUN, PRESENTER, CONF_TABLE, FURNITURE, mdToHtml, bulbs, burst, FX, ARCHETYPES, deskPhonePos, setHour: (h) => { S.hourOverride = h; }, nightLights, lookFor, costLevel, toolLabel, modelShort, renderScene, iso, now: nowS, S,
+    freePoint, segmentFree, roomOf, nearestFree, nearSpot, subSpot, view, debugScale: (k) => { view.scale = k; roomCache = null; }, nightLevel, FUN, PRESENTER, CONF_TABLE, FURNITURE, mdToHtml, bulbs, burst, FX, ARCHETYPES, deskPhonePos, setHour: (h) => { S.hourOverride = h; }, nightLights, lookFor, lookOf, critterLook, isAnthropic, costLevel, toolLabel, modelShort, renderScene, iso, now: nowS, S,
     constants: { TW, TH, MAIN_W, W, H, WH, WALL, SPLIT_X, SPLIT_Y, PW, DOORS, ANNEX_X, ANNEX_DOORS, SOFA_SEATS, STANDING, CAFE_SPOTS, DOOR_SPOT, SUB_SPOTS, CHAIR, PLANTS, GRID, CLEAR },
   };
   if (TEST) resize();

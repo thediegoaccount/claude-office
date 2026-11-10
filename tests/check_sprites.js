@@ -19,6 +19,8 @@ for (const [name, map] of Object.entries(S.maps)) {
 const looks = [
   { shirt: "#e74c3c", hair: "#2d1b0e", skin: "#f5cba7", pants: "#2c3e50", accent: "#c0392b", jacket: "#1a1a1a", hairStyle: "bun", torso: "jacket", glasses: true, bag: true, blush: true },
   { shirt: "#3498db", hair: "#111", skin: "#8d5524", pants: "#555", accent: "#27ae60", jacket: "#4a3b2a", hairStyle: "bald", torso: "dress", glasses: false, bag: false, blush: false },
+  { kind: "critter", body: "#d97757", shirt: "#3498db", hair: "#6b3e1f", accent: "#c0392b", head: "long", glasses: "round", neck: "bow", coffee: true },
+  { kind: "critter", body: "#d97757", shirt: "#2ecc71", hair: "#111", accent: "#f1c40f", head: "top", glasses: "shades", neck: "scarf", coffee: false },
 ];
 for (const look of looks) {
   for (const pose of ["stand", "walk", "type", "sit", "sleep", "cup", "raise"]) {
@@ -27,6 +29,7 @@ for (const look of looks) {
       const want = S.TOP + (["sit", "type", "sleep"].includes(pose) ? 34 : 42);
       total++;
       if (cv.width !== S.W || cv.height !== want) { bad++; console.log(`build ${pose} ${cv.width}x${cv.height}`); }
+      if (look.kind === "critter" && !(cv.headTop >= 0 && cv.headTop < want - 10)) { bad++; console.log(`mascote ${pose} headTop=${cv.headTop}`); }
     }
   }
 }

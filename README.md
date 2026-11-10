@@ -66,6 +66,7 @@ Copie `office.config.example.json` para `office.config.json` e ajuste `workspace
 | Reunião de planejamento | sessão em **modo plano** (`permissionMode: plan`, inclusive o "Sim, quero um plano" do escritório) vai para a sala de reunião: o primeiro apresenta no telão, que mostra "PLANO" e a ação atual; os outros em plano e os subagentes deles sentam à mesa. Esperando aprovação, o balão mostra "plano pronto, aguardando aprovação". Ao sair do modo plano, volta para a mesa, que fica reservada |
 | Ciclo de ócio | a cada 20 min: cochila na mesa, toma café e depois passeia pelo lazer. Com mais de 2 h parado vai para o sofá |
 | Personagens | cada boneco ganha um arquétipo de escritório (o fazendeiro de beterraba, o rei das pegadinhas, a contadora dos gatos…) com visual e falas próprias |
+| Mascote laranja de pixel | sessão com **modelo da Anthropic** (ou o padrão do CLI): o boneco vira o mascote, com acessórios sorteados pela semente (peruca, boné, cartola, fones, óculos, gravata, cachecol, caneca de café…). Outros modelos continuam como pessoas |
 | Efeitos | confete quando alguém termina, faíscas quando nasce um subagente, "zzz" de quem cochila, poeira nos feixes de luz e anel pulsante no selecionado |
 | Startup Lab | anexo que acende quando o escritório lota (mais de 12 sessões) |
 | Céu nas janelas / escuridão | segue a hora do computador: dia, entardecer (17h30–19h) e noite. À noite só ficam acesas as telas dos computadores ocupados e poucas luzes. Para testar: `http://127.0.0.1:8777/?hora=22` |

@@ -88,6 +88,88 @@
 
   const cache = new Map();
 
+  /* Mascote dos modelos Anthropic: bichinho laranja de pixel, com acessórios sorteados (peruca, chapéu, óculos, café…). */
+  const MUG = ["wqw..", "wwwww", "www.w", "wwwww", "www.."];
+  function critterGrid(look, pose, frame, back) {
+    const sitting = !!SITTING[pose];
+    const h = TOP + (sitting ? 34 : 42);
+    const g = Array.from({ length: h }, () => new Array(W).fill(null));
+    const put = (x, y, w, hh, ch) => {
+      for (let r = y; r < y + hh; r++) for (let c = x; c < x + w; c++) if (r >= 0 && r < h && c >= 0 && c < W) g[r][c] = ch;
+    };
+    const f = frame % 2;
+    const dy = pose === "type" ? f : pose === "sleep" ? 1 : 0;
+    const feet = h - (sitting ? 14 : 2), legH = sitting ? 2 : 5; // sentado fica mais alto, para aparecer acima da cadeira e da mesa
+    const top = feet - legH - 12 + dy, bot = top + 12;
+    [4, 8, 14, 18].forEach((x, i) => put(x, bot + 1, 2, feet - bot - (pose === "walk" && (i + f) % 2 === 0 ? 1 : 0), "C"));
+    put(3, top, 18, 13, "c");
+    put(3, bot, 18, 1, "C");
+    put(20, top, 1, 13, "C");
+    const head = look.head, wig = head === "long" || head === "bob";
+    if (wig) {
+      const len = head === "long" ? 10 : 6;
+      put(2, top - 2, 20, 3, "h"); put(4, top - 3, 16, 1, "h");
+      if (back) put(2, top + 1, 20, len, "h");
+      else { put(2, top + 1, 2, len, "h"); put(20, top + 1, 2, len, "H"); put(4, top + 1, 5, 1, "h"); put(13, top + 1, 7, 1, "h"); put(11, top - 2, 1, 3, "H"); }
+    } else if (head === "curly") {
+      put(2, top - 3, 20, 4, "h"); put(1, top - 1, 22, 3, "h"); put(3, top - 4, 18, 1, "h");
+      [3, 8, 13, 18].forEach((x) => put(x, top - 5, 3, 1, "h"));
+      [5, 10, 15].forEach((x) => put(x, top - 2, 2, 1, "H"));
+      if (back) put(2, top + 1, 20, 4, "h");
+    } else if (head === "mohawk") {
+      put(10, top - 5, 4, 5, "n"); put(11, top - 6, 2, 1, "n"); put(13, top - 5, 1, 5, "N");
+    } else if (head === "cap") {
+      put(4, top - 3, 16, 3, "n"); put(5, top - 4, 14, 1, "n"); put(back ? 1 : 3, top - 1, 20, 1, "N");
+    } else if (head === "top") {
+      put(7, top - 7, 10, 6, "k"); put(7, top - 3, 10, 1, "n"); put(4, top - 1, 16, 1, "k");
+    } else if (head === "party") {
+      for (let i = 0; i < 6; i++) put(11 - i, top - 6 + i, 2 + 2 * i, 1, i % 2 ? "N" : "n");
+      put(11, top - 8, 2, 2, "w");
+    } else if (head === "beanie") {
+      put(5, top - 4, 14, 1, "n"); put(4, top - 3, 16, 2, "n"); put(3, top - 1, 18, 1, "N"); put(11, top - 6, 2, 2, "w");
+    } else if (head === "phones") {
+      put(3, top - 2, 18, 1, "k"); put(2, top - 1, 2, 1, "k"); put(20, top - 1, 2, 1, "k");
+      put(1, top, 3, 5, "k"); put(20, top, 3, 5, "k"); put(1, top + 1, 1, 3, "n"); put(22, top + 1, 1, 3, "n");
+    }
+    const phones = head === "phones", armY = top + (phones ? 7 : 5);
+    const mug = !back && (pose === "cup" || (look.coffee && pose !== "type" && pose !== "raise" && pose !== "sleep"));
+    put(1, armY + (pose === "type" ? f : 0), 2, 3, "c");
+    if (pose === "raise") put(21, top - 4, 2, 9, "c");
+    else if (mug) put(21, top + 8, 2, 2, "c");
+    else put(21, armY + (pose === "type" ? 1 - f : 0), 2, 3, "c");
+    if (!back) {
+      const eyes = () => {
+        if (pose === "sleep") { put(7, top + 5, 2, 1, "e"); put(15, top + 5, 2, 1, "e"); }
+        else { put(7, top + 3, 2, 3, "e"); put(15, top + 3, 2, 3, "e"); }
+      };
+      if (look.glasses === "shades") {
+        put(5, top + 3, 6, 3, "k"); put(13, top + 3, 6, 3, "k"); put(3, top + 3, 18, 1, "k"); put(6, top + 4, 1, 1, "w"); put(14, top + 4, 1, 1, "w");
+      } else if (look.glasses === "round") {
+        put(5, top + 2, 6, 5, "k"); put(13, top + 2, 6, 5, "k"); put(11, top + 4, 2, 1, "k");
+        put(6, top + 3, 4, 3, "w"); put(14, top + 3, 4, 3, "w");
+        eyes();
+      } else eyes();
+      if (look.neck === "tie") { put(10, top + 8, 4, 1, "T"); put(11, top + 9, 2, 3, "t"); }
+      else if (look.neck === "bow") { put(8, top + 9, 3, 3, "t"); put(13, top + 9, 3, 3, "t"); put(11, top + 10, 2, 1, "T"); }
+      else if (look.neck === "scarf") { put(3, top + 9, 18, 2, "t"); put(3, top + 10, 18, 1, "T"); put(15, top + 11, 3, 3, "t"); }
+      if (mug) stamp(g, MUG, 18, top + 4);
+    } else if (look.neck === "scarf") { put(3, top + 9, 18, 2, "t"); put(3, top + 10, 18, 1, "T"); }
+    const src = g.map((row) => row.slice());
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < W; x++) {
+        if (src[y][x]) continue;
+        if ((y > 0 && src[y - 1][x]) || (y < h - 1 && src[y + 1][x]) || (x > 0 && src[y][x - 1]) || (x < W - 1 && src[y][x + 1])) g[y][x] = "o";
+      }
+    }
+    return g;
+  }
+
+  function critterPalette(look) {
+    const body = look.body || "#d97757";
+    return { o: "#4a2416", c: body, C: shade(body, 0.82), e: "#2b1d14", h: look.hair, H: shade(look.hair, 0.7),
+      n: look.shirt, N: shade(look.shirt, 0.72), t: look.accent, T: shade(look.accent, 0.72), w: "#ffffff", q: "#6e4b2a", k: "#222" };
+  }
+
   function grid(look, pose, frame, back) {
     const sitting = !!SITTING[pose];
     const h = TOP + (sitting ? 34 : 42);
@@ -134,8 +216,9 @@
     frame = frame || 0;
     const key = JSON.stringify([look, pose, frame % 2, back]);
     if (cache.has(key)) return cache.get(key);
-    const g = grid(look, pose, frame, back);
-    const pal = palette(look);
+    const critter = look.kind === "critter";
+    const g = critter ? critterGrid(look, pose, frame, back) : grid(look, pose, frame, back);
+    const pal = critter ? critterPalette(look) : palette(look);
     const cv = root.document.createElement("canvas");
     cv.width = W;
     cv.height = g.length;
@@ -148,13 +231,14 @@
         ctx.fillRect(x, y, 1, 1);
       }
     }
+    if (critter) cv.headTop = Math.max(0, g.findIndex((row) => row.some(Boolean)));
     if (cache.size > 600) cache.clear();
     cache.set(key, cv);
     return cv;
   }
 
   root.Sprites = {
-    build, grid, shade, W, TOP,
+    build, grid, critterGrid, shade, W, TOP,
     maps: { HEAD, HAIRS, GLASSES, BLUSH, TORSOS, BAG_STRAP, BAG, ARM_DOWN, ARM_TYPE, ARM_UP, ARM_CUP, LEG, LEG_SIT, SKIRT, SKIRT_SIT },
     widths: { HEAD: 16, HAIRS: 16, GLASSES: 16, BLUSH: 16, TORSOS: 16, BAG_STRAP: 16, BAG: 8, ARM_DOWN: 4, ARM_TYPE: 4, ARM_UP: 4,
       ARM_CUP: 4, LEG: 7, LEG_SIT: 16, SKIRT: 16, SKIRT_SIT: 16 },
