@@ -181,12 +181,16 @@
     hairStyle: "parted", torso: "jacket", glasses: true, bag: false, blush: false };
   function modelShort(m) {
     if (!m) return "padrão do CLI";
+    if (String(m).includes("/")) return String(m).replace(/^[a-z0-9_-]+\//, "");
     const s = String(m).replace(/^claude-/, "").replace(/-\d{8}$/, "").replace(/\[.*\]$/, "");
     const mm = s.match(/^([a-z]+)-(\d+)(?:-(\d+))?/i);
     return mm ? mm[1][0].toUpperCase() + mm[1].slice(1) + " " + mm[2] + (mm[3] ? "." + mm[3] : "") : s;
   }
+  // Modelos de provedores externos (Gemini, OpenAI, Groq…) vêm como "provedor/modelo" e não gastam tokens do Claude.
+  const isExternal = (model) => !!model && ((S.models && S.models.groups) || []).some((g) => g.external && g.models.includes(model));
   function costLevel(model, effort) {
     const m = String(model || "").toLowerCase();
+    if (isExternal(model)) return 1;
     let lv = /opus|fable/.test(m) ? 3 : /haiku|flash|mini|nano/.test(m) ? 1 : 2;
     lv += ({ low: -1, high: 1, xhigh: 1, max: 2 })[effort] || 0;
     const mc = (S.state && S.state.model_costs) || {};
@@ -2119,11 +2123,13 @@
     });
   }
 
-  function fillModels(sel, firstLabel) {
+  function fillModels(sel, firstLabel, external) {
     if (!sel) return;
     const m = S.models || { groups: [] };
-    sel.innerHTML = `<option value="">${esc(firstLabel)}</option>` + (m.groups || []).filter((g) => g.models.length)
+    const keep = sel.value;
+    sel.innerHTML = `<option value="">${esc(firstLabel)}</option>` + (m.groups || []).filter((g) => g.models.length && (external == null || !!g.external === external))
       .map((g) => `<optgroup label="${esc(g.label)}">${g.models.map((x) => `<option>${esc(x)}</option>`).join("")}</optgroup>`).join("");
+    sel.value = [...sel.options || []].some((o) => o.value === keep) ? keep : "";
   }
 
   let nextSeed = "";
@@ -2141,18 +2147,24 @@
     c.drawImage(spr, 0, spr.headTop != null ? spr.height - 33 : 0, 24, 33, 0, 0, 40, 55);
   }
 
+  function newModelChanged() {
+    drawFace();
+    const c = S.cli || {}, demo = !!(S.state && S.state.demo), ext = isExternal($("newModel").value);
+    const bad = demo || (!ext && (!c.available || !c.logged_in));
+    const warn = $("newWarn");
+    warn.hidden = !bad && !ext;
+    warn.textContent = demo ? "Indisponível no modo demo." : ext ? "Modelo externo: conversa simples, sem ferramentas nem acesso a arquivos. Não gasta tokens do Claude."
+      : !c.available ? "Claude Code não encontrado nesta máquina." : !c.logged_in ? "O CLI não está logado: clique no selo CLI na barra de baixo." : "";
+    $("newSend").disabled = bad;
+  }
+
   async function openNew() {
     await refreshCli();
     const c = S.cli || {};
-    const warn = $("newWarn");
-    const bad = !c.available || !c.logged_in;
-    warn.hidden = !bad;
-    warn.textContent = S.state && S.state.demo ? "Indisponível no modo demo." : !c.available ? "Claude Code não encontrado nesta máquina." : !c.logged_in ? "O CLI não está logado: clique no selo CLI na barra de baixo." : "";
-    $("newSend").disabled = bad;
     $("newCwd").innerHTML = (c.workspaces || []).map((w) => `<option>${esc(w)}</option>`).join("") || `<option value="">(nenhuma pasta em workspace_roots)</option>`;
     fillModels($("newModel"), "padrão do CLI");
     $("newModel").value = store.get("office.model", "");
-    drawFace();
+    newModelChanged();
     $("newCli").textContent = `${c.version || "versão ?"} · ${c.path || "claude não encontrado"}`;
     images.new = []; renderTray("new");
     modal("dlgNew", true);
@@ -2161,7 +2173,7 @@
   async function sendNew() {
     const prompt = $("newPrompt").value.trim();
     if (!prompt && !images.new.length) return toast("Escreva a primeira mensagem", "red");
-    const plan = await askPlan(prompt, images.new.length);
+    const plan = isExternal($("newModel").value) ? false : await askPlan(prompt, images.new.length);
     if (plan === null) return;
     const title = $("newTitle").value.trim();
     try {
@@ -2180,7 +2192,7 @@
     if (!a) return;
     const prompt = $("cmdText").value.trim();
     if (!prompt && !images.cmd.length) return;
-    const plan = await askPlan(prompt, images.cmd.length);
+    const plan = a.external ? false : await askPlan(prompt, images.cmd.length);
     if (plan === null) return;
     try {
       const job = await api("/api/cli/send", { session: a.id, prompt, plan, model: $("cmdModel").value || null, images: images.cmd });
@@ -2199,6 +2211,8 @@
   function select(id) {
     if (!id || id === "__manager") return;
     S.selected = id;
+    const sel = agentById(id);
+    fillModels($("cmdModel"), "modelo atual da sessão", !!(sel && sel.external));
     const av = avatars.get(id);
     if (av && S.room !== "overview") {
       const rr = roomOf(av.x, av.y);
@@ -2332,7 +2346,7 @@
     resize();
     bind();
     newSeed();
-    $("newModel").addEventListener("change", drawFace);
+    $("newModel").addEventListener("change", newModelChanged);
     const sala = { escritorio: "office", lab: "annex", lazer: "fun", geral: "overview" }[(/[?&]sala=([a-z]+)/.exec(window.location.search || "") || [])[1]];
     if (sala) setRoom(sala, true);
     try { S.token = (await api("/api/token")).token; } catch (e) { S.token = null; }

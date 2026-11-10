@@ -472,6 +472,22 @@ def snapshot(window_hours=24, limit=24, root=None, now=None):
             "source": {"projects": str(root), "exists": root.is_dir(), "total_sessions": total, "latest_activity_at": latest}}
 
 
+def merge_snapshots(main, extra, limit=24):
+    """Junta as conversas de provedores externos ao retrato principal, respeitando o limite de sessões."""
+    agents = main["agents"] + extra["agents"]
+    tops = sorted((a for a in agents if a["kind"] == "session"), key=lambda a: a["last_activity_at"] or 0, reverse=True)
+    keep = {a["id"] for a in tops[:limit]}
+    main["agents"] = [a for a in agents if (a["id"] if a["kind"] == "session" else a.get("parent")) in keep]
+    feed = [e for e in main["feed"] + extra["feed"] if str(e["agent"]).split("::")[0] in keep]
+    main["feed"] = sorted(feed, key=lambda e: e["ts"] or 0, reverse=True)[:40]
+    for a in extra["agents"]:
+        a["external"] = True
+    main["source"]["total_sessions"] += extra["source"]["total_sessions"]
+    latest = [x for x in (main["source"]["latest_activity_at"], extra["source"]["latest_activity_at"]) if x]
+    main["source"]["latest_activity_at"] = max(latest) if latest else None
+    return main
+
+
 def find_session_file(session_id, root=None):
     root = projects_dir(root)
     sid, _, aid = session_id.partition("::")

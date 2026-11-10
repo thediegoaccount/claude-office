@@ -152,9 +152,44 @@ Teste manual do fluxo de permissão, com o servidor rodando: `python tests\e2e_p
 - **O balão de permissão não aparece**: instale o hook, abra uma sessão **nova** e confira `office_permission.log`. O escritório precisa estar aberto no navegador.
 - **CLI: conectar / expirado**: clique no selo para fazer login. Se o `claude` não for encontrado, defina `claude_bin` no `office.config.json` ou a variável `CLAUDE_BIN`.
 
+## Modelos externos (Gemini, OpenAI, Groq, OpenRouter, Ollama)
+
+Para perguntas que não precisam do Claude, dá para chamar um especialista que conversa com outro provedor e **não gasta tokens do Claude**. Funciona com qualquer API compatível com OpenAI (`/chat/completions`).
+
+1. Em `office.config.json`, preencha `providers` com a chave e os modelos que quer ver na lista:
+
+```json
+"providers": {
+  "gemini": { "api_key": "SUA_CHAVE", "models": ["gemini-2.5-flash"] },
+  "groq": { "api_key": "SUA_CHAVE", "models": ["llama-3.3-70b-versatile"] },
+  "ollama": { "models": ["llama3.2"] }
+}
+```
+
+2. Reinicie o servidor. Os modelos aparecem no seletor como `provedor/modelo`, em **+ Novo Especialista**.
+3. Para continuar a conversa, selecione o boneco e use **Enviar comando**, como em qualquer sessão.
+
+| Provedor | Endereço padrão | Variável de ambiente (alternativa ao `api_key`) |
+|---|---|---|
+| `gemini` | `https://generativelanguage.googleapis.com/v1beta/openai` | `GEMINI_API_KEY` |
+| `openai` | `https://api.openai.com/v1` | `OPENAI_API_KEY` |
+| `groq` | `https://api.groq.com/openai/v1` | `GROQ_API_KEY` |
+| `openrouter` | `https://openrouter.ai/api/v1` | `OPENROUTER_API_KEY` |
+| `ollama` | `http://localhost:11434/v1` | não usa chave |
+
+Outros provedores entram com um nome qualquer mais `base_url` (e `api_key`). O campo opcional `system` define uma instrução fixa para o provedor.
+
+O que muda nessas conversas:
+
+- É **conversa simples**: o modelo não lê arquivos, não roda comandos e não usa ferramentas. Imagens coladas vão junto se o modelo aceitar visão.
+- O boneco é uma pessoa (o mascote laranja fica só para os modelos da Anthropic) e a conversa não entra no ranking nem na barra de limites.
+- O histórico fica em `office_chats/` (fora do git), no mesmo formato das transcrições do Claude Code. Cada envio manda as últimas 40 mensagens.
+- Erros do provedor (chave recusada, cota estourada, modelo inexistente) aparecem como resposta do boneco.
+- "Gratuito" depende do provedor: confira no site de cada um quais modelos têm cota grátis e os limites por minuto e por dia.
+
 ## Privacidade
 
-Nada sai da máquina. O servidor só lê `~/.claude/projects`, mascara segredos e escuta em `127.0.0.1`. Imagens coladas ficam em `%TEMP%\claude-office-images` e são apagadas depois de 7 dias.
+Nada sai da máquina, exceto as mensagens que você enviar a um modelo externo, que vão para o provedor escolhido. O servidor só lê `~/.claude/projects`, mascara segredos e escuta em `127.0.0.1`. Imagens coladas ficam em `%TEMP%\claude-office-images` e são apagadas depois de 7 dias.
 
 ## Limitações
 

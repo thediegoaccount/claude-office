@@ -11,6 +11,30 @@
     "claude-haiku-5-5",
     "claude-fable-5-1"
   ],
+  "providers_note": "Provedores externos (API compatível com OpenAI) para conversas simples sem gastar tokens do Claude. Preencha api_key aqui (office.config.json fica fora do git) ou use a variável de ambiente do provedor. Confira no site de cada provedor quais modelos têm cota gratuita.",
+  "providers": {
+    "gemini": {
+      "api_key": "",
+      "models": [
+        "gemini-2.5-flash"
+      ]
+    },
+    "openai": {
+      "api_key": "",
+      "models": []
+    },
+    "groq": {
+      "api_key": "",
+      "models": []
+    },
+    "openrouter": {
+      "api_key": "",
+      "models": []
+    },
+    "ollama": {
+      "models": []
+    }
+  },
   "prices_note": "USD por milhão de tokens, tabela da API da Anthropic (2026-10-06). Confira em platform.claude.com/pricing; cache_write = 1,25x input (cache de 5 min).",
   "prices": {
     "fable-5-1": {

@@ -15,6 +15,7 @@ from datetime import datetime
 from pathlib import Path
 
 import office
+import providers
 
 BASE = Path(__file__).resolve().parent
 MODEL_RE = re.compile(r"^[A-Za-z0-9._\[\]-]{2,80}$")
@@ -55,7 +56,7 @@ def _desktop():
 
 def defaults():
     return {"workspace_roots": [str(_desktop() / "git")], "claude_bin": "", "permission_mode": "default",
-            "budget_unit": "usd", "monthly_budget": 100, "cycle_start_day": 1, "prices": {}, "models": []}
+            "budget_unit": "usd", "monthly_budget": 100, "cycle_start_day": 1, "prices": {}, "models": [], "providers": {}}
 
 
 def _raw():
@@ -204,12 +205,14 @@ def auth_action(action):
 def models():
     extra = [m for m in config().get("models") or [] if isinstance(m, str) and MODEL_RE.match(m)]
     return {"default": "padrão do CLI", "groups": [{"label": "Apelidos", "models": ALIASES},
-                                                    {"label": "Configurados", "models": extra}]}
+                                                    {"label": "Configurados", "models": extra}] + providers.model_groups(config())}
 
 
 def _check_model(model):
     if not model:
         return None
+    if providers.is_external(model, config()):
+        return model
     allowed = set(ALIASES) | {g for g in config().get("models") or [] if isinstance(g, str)}
     if not MODEL_RE.match(model) or model not in allowed:
         raise ValueError("modelo inválido")
@@ -382,8 +385,23 @@ def _runner(job, args, cwd, prompt):
             pass
 
 
-def _start(kind, key, args, cwd, prompt, title, model, images):
-    auth = auth_status()
+def _chat_runner(job, paths):
+    """Turno de conversa com provedor externo: sem CLI, sem ferramentas."""
+    try:
+        text, err, _ = providers.run_turn(config(), job["session"], job["model"], paths)
+        job["output"] = office.mask(text or "")[:20000]
+        job["error"] = None if job["cancelled"] else err
+        job["exit_code"] = 1 if err else 0
+    except Exception as e:  # noqa: BLE001 - a thread nunca pode derrubar o servidor
+        job["error"] = f"falha na conversa: {e}"
+    finally:
+        job.update(running=False, finished=time.time())
+        with _lock:
+            _busy.pop(job["session"], None)
+
+
+def _start(kind, key, args, cwd, prompt, title, model, images, chat=False):
+    auth = {"logged_in": True} if chat else auth_status()
     if not auth["logged_in"]:
         raise RuntimeError("O Claude Code não está logado (ou o login expirou). Clique no selo CLI para entrar.")
     with _lock:
@@ -397,7 +415,11 @@ def _start(kind, key, args, cwd, prompt, title, model, images):
         _busy[key] = jid
         while len(_jobs) > 50:
             _jobs.pop(next(iter(_jobs)))
-    threading.Thread(target=_runner, args=(job, args, cwd, prompt), daemon=True).start()
+    if chat:
+        job["external"] = True
+        threading.Thread(target=_chat_runner, args=(job, images), daemon=True).start()
+    else:
+        threading.Thread(target=_runner, args=(job, args, cwd, prompt), daemon=True).start()
     return public(job)
 
 
@@ -405,7 +427,24 @@ def public(job):
     return {k: v for k, v in job.items() if not k.startswith("_")}
 
 
+def _chat_text(prompt, paths):
+    prompt = (prompt or "").strip()
+    if not prompt and not paths:
+        raise ValueError("mensagem vazia")
+    return prompt
+
+
 def new_session(cwd, title, prompt, plan=False, model=None, look_seed=None, images=None):
+    if providers.is_external(model, config()):
+        title = office.clip(title or "", 60)
+        seed = look_seed if isinstance(look_seed, str) and SEED_RE.match(look_seed) else None
+        paths = save_images(images)
+        text = _chat_text(prompt, paths)
+        sid = str(uuid.uuid4())
+        _save_name(sid, {"title": title, "origin": "office", "created": time.time(), "look_seed": seed})
+        providers.add_title(sid, title)
+        providers.add_user(sid, text, str(Path(cwd).resolve()) if cwd and _inside_roots(cwd) else None, len(paths))
+        return _start("new", sid, None, None, None, title, model, paths, chat=True)
     if not find_claude():
         raise RuntimeError("claude não encontrado")
     if not cwd or not _inside_roots(cwd):
@@ -426,6 +465,21 @@ def new_session(cwd, title, prompt, plan=False, model=None, look_seed=None, imag
 
 
 def send(session_id, prompt, plan=False, model=None, images=None):
+    if providers.is_chat(session_id):
+        cfg = config()
+        if model and not providers.is_external(model, cfg):
+            raise ValueError("esta conversa usa um provedor externo; escolha um modelo externo ou mantenha o atual")
+        model = model or office.load(providers.chat_file(session_id)).model
+        if not providers.is_external(model, cfg):
+            raise ValueError("o modelo desta conversa não está mais em providers; escolha outro modelo externo")
+        with _lock:
+            if session_id in _busy:
+                raise RuntimeError("essa sessão já está executando um comando; espere terminar ou cancele")
+        paths = save_images(images)
+        providers.add_user(session_id, _chat_text(prompt, paths), None, len(paths))
+        return _start("send", session_id, None, None, None, None, model, paths, chat=True)
+    if providers.is_external(model, config()):
+        raise ValueError("modelos externos só conversam em sessões próprias: crie um novo especialista com esse modelo")
     path, _ = office.find_session_file(str(session_id or ""))
     if "::" in session_id:
         raise ValueError("não é possível enviar comandos para um subagente")

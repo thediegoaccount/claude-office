@@ -15,6 +15,7 @@ import cli_bridge
 import demo
 import office
 import permissions
+import providers
 import usage
 
 STATIC = Path(__file__).resolve().parent / "static"
@@ -45,7 +46,8 @@ class Office:
             snap.update(pending=demo.pending(), usage=demo.usage(), model_costs=demo.model_costs(), limits=demo.limits())
             busy = {}
         else:
-            snap = office.snapshot(hours, limit, self.projects)
+            snap = office.merge_snapshots(office.snapshot(hours, limit, self.projects),
+                                          office.snapshot(hours, limit, providers.chats_dir()), limit)
             permissions.heartbeat()
             cyc, mc = self.usage()
             snap.update(pending=permissions.list_pending(), usage=cyc, model_costs=mc, limits=cli_bridge.limits_snapshot())
@@ -117,7 +119,9 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/api/full":
                 if self.app.demo:
                     return self._send(200, {"text": "Texto completo (modo demo)."})
-                return self._send(200, {"text": office.full_text(q.get("session", [""])[0], q.get("ref", [""])[0], self.app.projects)})
+                sid = q.get("session", [""])[0]
+                root = providers.chats_dir() if providers.is_chat(sid) else self.app.projects
+                return self._send(200, {"text": office.full_text(sid, q.get("ref", [""])[0], root)})
             if u.path == "/api/health":
                 return self._send(200, self.app.health())
             if u.path in ("/api/cli/status", "/api/cli/models", "/api/token"):
