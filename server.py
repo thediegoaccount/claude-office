@@ -62,6 +62,7 @@ class Office:
             a["look_seed"] = n.get("look_seed")
             a["origin"] = n.get("origin")
             a["routed"] = n.get("routed")
+            a["superpowers"] = bool(n.get("superpowers"))
             a["busy"] = a["id"] in busy
         if not self.demo:
             snap["manager"] = orchestrator.snapshot()
@@ -208,7 +209,7 @@ class Handler(BaseHTTPRequestHandler):
             return library.run(str(b.get("id") or ""))
         if path == "/api/cli/new":
             return cli_bridge.new_session(b.get("cwd"), b.get("title"), b.get("prompt"), bool(b.get("plan")),
-                                          b.get("model") or None, b.get("look_seed"), b.get("images"), bool(b.get("orchestrate")))
+                                          b.get("model") or None, b.get("look_seed"), b.get("images"), bool(b.get("orchestrate")), bool(b.get("superpowers")))
         if path == "/api/cli/send":
             return cli_bridge.send(str(b.get("session") or ""), b.get("prompt"), bool(b.get("plan")), b.get("model") or None,
                                    b.get("images"))

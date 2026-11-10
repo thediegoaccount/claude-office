@@ -17,6 +17,7 @@ Options:
                               "dontAsk", "plan")
   --setting-sources <list>    Sources (choices: "host", "none")
   --no-session-persistence    Disable session persistence
+  --plugin-dir <path>         Load a plugin from a directory
 """
 
 

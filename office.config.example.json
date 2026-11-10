@@ -17,6 +17,11 @@
     "model": "haiku",
     "max_parts": 4
   },
+  "superpowers_note": "Plugin Superpowers incorporado em vendor/superpowers (metodologia: design, plano, testes e revisão). min_effort é o esforço a partir do qual o gerente liga o plugin sozinho (1 a 5).",
+  "superpowers": {
+    "enabled": true,
+    "min_effort": 4
+  },
   "providers_note": "Provedores externos (API compatível com OpenAI) para conversas simples sem gastar tokens do Claude. Preencha api_key aqui (office.config.json fica fora do git) ou use a variável de ambiente do provedor. Confira no site de cada provedor quais modelos têm cota gratuita.",
   "providers": {
     "gemini": {

@@ -174,6 +174,29 @@ Configuração em `office.config.json`:
 
 Limites: a triagem é uma **estimativa** feita por um modelo barato a partir do texto da demanda, não uma medição do trabalho real, e custa uma chamada curta a mais. Ela vale para demandas novas; comandos enviados a uma sessão já aberta não passam pelo gerente. Os subagentes são sessões independentes na mesma pasta: ninguém junta os resultados no final.
 
+## Superpowers
+
+O plugin [Superpowers](https://github.com/obra/superpowers) (Jesse Vincent, licença MIT) vem **incorporado** em `vendor/superpowers`, sem alterações, e é carregado nos agentes pelo próprio escritório: não precisa instalar nada no Claude Code. Ele dá ao agente uma metodologia de trabalho em skills: levantar o design antes de construir, escrever um plano em tarefas pequenas, executar com testes primeiro, revisar e só declarar "pronto" com verificação. Há também skills avulsas, como depuração sistemática.
+
+Quando o plugin entra:
+
+- **Você liga**: opção "⚡ Superpowers" no Novo Especialista ou "Talento Superpowers" na ficha da biblioteca.
+- **O gerente liga**: quando a triagem mede esforço 4 ou 5. Subagentes leves da mesma demanda ficam sem o plugin.
+- **Comandos seguintes** enviados a uma sessão que nasceu com o plugin continuam com ele.
+
+```json
+"superpowers": { "enabled": true, "min_effort": 4 }
+```
+
+Pontos de atenção:
+
+- **Gasta mais tokens**: design, plano, testes e revisões custam. Por isso fica desligado em demandas simples.
+- **Ele pode parar para perguntar**: a skill de brainstorming conversa antes de construir. Responda pelo "Enviar comando". Em agente agendado ninguém responde, então evite ligar o talento em rotinas automáticas.
+- **Só agentes do Claude**: modelos externos apenas conversam e não carregam skills.
+- Exige um CLI com `--plugin-dir`. Se você também instalou o Superpowers no Claude Code, ele carrega em todos os agentes de qualquer jeito, e a opção daqui deixa de fazer diferença.
+- O escritório define `SUPERPOWERS_DISABLE_TELEMETRY=1` nos agentes, então o logo do recurso visual opcional não é buscado no site do autor.
+- Para atualizar a cópia, veja `vendor/superpowers/VENDORED.md`.
+
 ## Biblioteca de agentes e agendamentos
 
 O botão **📚 Biblioteca e agendamentos** (acima do Novo Especialista) guarda agentes prontos: nome, pasta, modelo e instrução. Criar um agente abre uma **ficha de personagem de RPG**: retrato com "Sortear aparência", classe (o modelo), reino (a pasta), missão (a instrução) e rotina (o agendamento). Os atributos Poder, Velocidade e Custo são ilustrativos. Também dá para usar **Salvar na biblioteca** no diálogo do Novo Especialista.

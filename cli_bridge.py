@@ -57,7 +57,7 @@ def _desktop():
 
 def defaults():
     return {"workspace_roots": [str(_desktop() / "git")], "claude_bin": "", "permission_mode": "default",
-            "budget_unit": "usd", "monthly_budget": 100, "cycle_start_day": 1, "prices": {}, "models": [], "providers": {}, "orchestrator": {}}
+            "budget_unit": "usd", "monthly_budget": 100, "cycle_start_day": 1, "prices": {}, "models": [], "providers": {}, "orchestrator": {}, "superpowers": {}}
 
 
 def _raw():
@@ -182,7 +182,7 @@ def cli_info():
         m = re.search(r"--permission-mode.*?\(choices:([^)]*)\)", help_text, re.DOTALL)
         modes = re.findall(r'"([A-Za-z]+)"', m.group(1)) if m else []
         flags = {f: f in help_text for f in ("--session-id", "--name", "--permission-mode", "--output-format", "--model", "--resume",
-                                                    "--no-session-persistence")}
+                                                    "--no-session-persistence", "--plugin-dir")}
         return {"available": True, "path": path, "version": ver, "flags": flags, "modes": modes}
     info = _cached("info", 600, go)
     if not info["available"]:
@@ -202,6 +202,31 @@ def auth_action(action):
         return {"ok": r.returncode == 0}
     subprocess.Popen(_argv(path) + ["auth", "login"], creationflags=NEW_CONSOLE, stdin=None)
     return {"ok": True, "message": "Uma janela de login foi aberta; conclua o login nela."}
+
+
+# ---------- Superpowers (plugin incorporado em vendor/superpowers) ----------
+
+def superpowers_dir():
+    return BASE / "vendor" / "superpowers"
+
+
+def superpowers_info():
+    raw = config().get("superpowers") if isinstance(config().get("superpowers"), dict) else {}
+    try:
+        manifest = json.loads((superpowers_dir() / ".claude-plugin" / "plugin.json").read_text("utf-8"))
+    except (OSError, ValueError):
+        manifest = None
+    try:
+        min_effort = max(1, min(5, int(raw.get("min_effort", 4))))
+    except (TypeError, ValueError):
+        min_effort = 4
+    enabled = bool(raw.get("enabled", True))
+    return {"enabled": enabled, "min_effort": min_effort, "version": (manifest or {}).get("version"),
+            "available": enabled and manifest is not None and bool(cli_info()["flags"].get("--plugin-dir"))}
+
+
+def _sp_args(on):
+    return ["--plugin-dir", str(superpowers_dir())] if on and superpowers_info()["available"] else []
 
 
 def models():
@@ -365,7 +390,7 @@ def _runner(job, args, cwd, prompt):
     try:
         with open(tmp, "rb") as stdin:
             proc = subprocess.Popen(_argv(find_claude()) + args, stdin=stdin, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                    cwd=cwd, creationflags=NO_WINDOW)
+                                    cwd=cwd, creationflags=NO_WINDOW, env={**os.environ, "SUPERPOWERS_DISABLE_TELEMETRY": "1"})
             job["_proc"] = proc
             try:
                 out, err = proc.communicate(timeout=JOB_TIMEOUT)
@@ -436,7 +461,7 @@ def _chat_text(prompt, paths):
     return prompt
 
 
-def _launch(cwd, title, prompt, plan, model, seed, paths, routed=None):
+def _launch(cwd, title, prompt, plan, model, seed, paths, routed=None, superpowers=False):
     """Abre uma sessão nova (CLI do Claude ou conversa com provedor externo) com os dados já validados."""
     meta = {"title": title, "origin": "office", "created": time.time(), "look_seed": seed, "routed": routed}
     if providers.is_external(model, config()):
@@ -455,7 +480,9 @@ def _launch(cwd, title, prompt, plan, model, seed, paths, routed=None):
     args = ["-p"] + (["--session-id", sid] if info["flags"].get("--session-id") else [])
     if title and info["flags"].get("--name"):
         args += ["-n", title]
-    args += mode_args + (["--model", model] if model else []) + ["--output-format", "json"]
+    sp = _sp_args(superpowers)
+    args += mode_args + (["--model", model] if model else []) + sp + ["--output-format", "json"]
+    meta["superpowers"] = bool(sp)
     _save_name(sid, meta)
     return _start("new", sid, args, str(Path(cwd).resolve()), build_prompt(prompt, prefix, paths), title, model, paths)
 
@@ -480,7 +507,7 @@ def _ask(model, text):
     return str(d.get("result") or "")
 
 
-def _orchestrate(job, cwd, title, prompt, plan, model, seed, paths):
+def _orchestrate(job, cwd, title, prompt, plan, model, seed, paths, superpowers=False):
     """O gerente mede o esforço, escolhe o modelo e, se valer a pena, divide a demanda em até 4 subagentes."""
     orchestrator.set_busy(1)
     try:
@@ -490,6 +517,11 @@ def _orchestrate(job, cwd, title, prompt, plan, model, seed, paths):
             dec = {"effort": None, "model": model, "reason": "", "parts": [], "error": office.clip(str(e), 120)}
         units = dec["parts"] or [{"title": "", "prompt": prompt, "effort": dec["effort"], "model": dec["model"]}]
         n, sessions, errors = len(units), [], []
+        spi = superpowers_info()
+        for u in units:  # demandas pesadas trabalham com a metodologia Superpowers
+            u["superpowers"] = spi["available"] and not providers.is_external(u["model"], config()) and (
+                superpowers or (u["effort"] or 0) >= spi["min_effort"])
+        dec["superpowers"] = any(u["superpowers"] for u in units)
         if n > 1:  # cada subagente sabe qual é o seu tema e o que ficou com os colegas
             for i, u in enumerate(units):
                 others = "; ".join(o["title"] or f"parte {k + 1}" for k, o in enumerate(units) if k != i)
@@ -502,7 +534,8 @@ def _orchestrate(job, cwd, title, prompt, plan, model, seed, paths):
             part_seed = (f"{seed}-{i}"[:40] if seed else None) if n > 1 else seed
             for choice in dict.fromkeys([u["model"], model]):
                 try:
-                    sessions.append(_launch(cwd, name, u["prompt"], plan, choice, part_seed, paths if n == 1 else [], routed)["session"])
+                    sessions.append(_launch(cwd, name, u["prompt"], plan, choice, part_seed, paths if n == 1 else [], routed,
+                                            u["superpowers"])["session"])
                     break
                 except Exception as e:  # noqa: BLE001 - tenta o modelo pedido antes de desistir
                     last = str(e)
@@ -515,7 +548,7 @@ def _orchestrate(job, cwd, title, prompt, plan, model, seed, paths):
         job.update(running=False, finished=time.time())
 
 
-def new_session(cwd, title, prompt, plan=False, model=None, look_seed=None, images=None, orchestrate=False):
+def new_session(cwd, title, prompt, plan=False, model=None, look_seed=None, images=None, orchestrate=False, superpowers=False):
     title = office.clip(title or "", 60)
     model = _check_model(model)
     seed = look_seed if isinstance(look_seed, str) and SEED_RE.match(look_seed) else None
@@ -525,13 +558,13 @@ def new_session(cwd, title, prompt, plan=False, model=None, look_seed=None, imag
     paths = save_images(images)
     _chat_text(prompt, paths)
     if not (orchestrate and orchestrator.settings(config())["enabled"]):
-        return _launch(cwd, title, prompt, plan, model, seed, paths)
+        return _launch(cwd, title, prompt, plan, model, seed, paths, superpowers=superpowers)
     job = {"id": uuid.uuid4().hex[:12], "kind": "triage", "session": "__manager", "title": title, "model": model, "images": len(paths),
            "started": time.time(), "finished": None, "exit_code": None, "error": None, "output": "", "incomplete": False,
            "cancelled": False, "running": True}
     with _lock:
         _jobs[job["id"]] = job
-    threading.Thread(target=_orchestrate, args=(job, cwd, title, prompt, plan, model, seed, paths), daemon=True).start()
+    threading.Thread(target=_orchestrate, args=(job, cwd, title, prompt, plan, model, seed, paths, superpowers), daemon=True).start()
     return public(job)
 
 
@@ -560,7 +593,8 @@ def send(session_id, prompt, plan=False, model=None, images=None):
     model = _check_model(model)
     paths = save_images(images)
     mode_args, prefix = _mode_args(plan)
-    args = ["-p", "-r", session_id] + mode_args + (["--model", model] if model else []) + ["--output-format", "json"]
+    sp = _sp_args(load_names().get(session_id, {}).get("superpowers"))
+    args = ["-p", "-r", session_id] + mode_args + (["--model", model] if model else []) + sp + ["--output-format", "json"]
     job = _start("send", session_id, args, p.cwd, build_prompt(prompt, prefix, paths), None, model, paths)
     origin = load_names().get(session_id, {}).get("origin")
     if origin != "office" and p.last_ts and time.time() - p.last_ts < 600:
@@ -695,5 +729,5 @@ def status(recheck=False):
                                                            "message": "claude não encontrado; instale o CLI do Claude Code: irm https://claude.ai/install.ps1 | iex"}
     return {"available": info["available"], "logged_in": auth["logged_in"], "auth_state": auth["state"],
             "auth_message": auth["message"], "path": info["path"], "version": info["version"], "modes": info.get("modes", []),
-            "workspaces": workspaces(), "roots": [str(r) for r in roots()],
+            "superpowers": superpowers_info(), "workspaces": workspaces(), "roots": [str(r) for r in roots()],
             "jobs": [public(j) for j in list(_jobs.values())[-20:]][::-1]}

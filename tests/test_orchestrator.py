@@ -91,6 +91,30 @@ def test_splits_into_subagents(orch, monkeypatch):
     assert "dividida em 3 subagentes" in done["output"]
 
 
+def test_superpowers_plugin(orch, monkeypatch):
+    info = cli_bridge.superpowers_info()
+    assert info["available"] and info["version"] and info["min_effort"] == 4
+    plugin = str(cli_bridge.superpowers_dir())
+    has = lambda c: "--plugin-dir" in c["args"] and c["args"][c["args"].index("--plugin-dir") + 1] == plugin
+    # direto, sem gerente: só com a opção marcada
+    finish(cli_bridge.new_session(orch["cwd"], "Sem", "faça", model="sonnet"))
+    on = finish(cli_bridge.new_session(orch["cwd"], "Com", "faça", model="sonnet", superpowers=True))
+    assert [has(c) for c in launches(orch["log"])] == [False, True]
+    assert cli_bridge.load_names()[on["session"]]["superpowers"] is True
+    # o gerente liga sozinho a partir do esforço 4 e deixa as partes leves sem o plugin
+    parts = [{"title": "Leve", "prompt": "tarefa leve", "effort": 2, "model": "haiku"},
+             {"title": "Pesada", "prompt": "tarefa pesada", "effort": 5, "model": "opus"}]
+    monkeypatch.setenv("FAKE_TRIAGE", json.dumps({"effort": 4, "model": "sonnet", "reason": "x", "parts": parts}))
+    done = finish(cli_bridge.new_session(orch["cwd"], "Mix", "faça tudo", model="sonnet", orchestrate=True))
+    by = {("pesada" in c["prompt"]): has(c) for c in launches(orch["log"])[2:]}
+    assert by == {True: True, False: False} and "com Superpowers" in done["output"]
+    # desligado na configuração: nunca carrega
+    cfg = json.loads(cli_bridge.config_path().read_text("utf-8"))
+    cli_bridge.config_path().write_text(json.dumps({**cfg, "superpowers": {"enabled": False}}), encoding="utf-8")
+    finish(cli_bridge.new_session(orch["cwd"], "Off", "faça", model="sonnet", superpowers=True))
+    assert not has(launches(orch["log"])[-1])
+
+
 def test_triage_failure_falls_back(orch, monkeypatch):
     monkeypatch.setenv("FAKE_TRIAGE", "desculpe, não entendi")
     done = finish(cli_bridge.new_session(orch["cwd"], "X", "faça algo", model="sonnet", orchestrate=True))

@@ -134,12 +134,13 @@ def summary(title, requested, decision):
     req = requested or "padrão do CLI"
     if decision.get("error"):
         return f"{name}: não consegui avaliar ({decision['error']}); segue com {req}"
+    sp = " · com Superpowers" if decision.get("superpowers") else ""
     if decision["parts"]:
         parts = "; ".join(f"{p['title'] or 'parte'} → {p['model'] or 'padrão'} (esforço {p['effort']}/5)" for p in decision["parts"])
-        return f"{name}: esforço {decision['effort']}/5, dividida em {len(decision['parts'])} subagentes: {parts}"
+        return f"{name}: esforço {decision['effort']}/5, dividida em {len(decision['parts'])} subagentes: {parts}{sp}"
     chosen = decision["model"] or "padrão do CLI"
     change = f"{chosen} no lugar de {req}" if chosen != req else f"{chosen} mantido"
-    return f"{name}: esforço {decision['effort']}/5 ({EFFORT_LABEL[decision['effort']]}), {change}" + (f". {decision['reason']}" if decision.get("reason") else "")
+    return f"{name}: esforço {decision['effort']}/5 ({EFFORT_LABEL[decision['effort']]}), {change}" + sp + (f". {decision['reason']}" if decision.get("reason") else "")
 
 
 def record(title, requested, decision):
