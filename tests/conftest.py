@@ -29,6 +29,7 @@ def isolated_env(tmp_path, monkeypatch):
     monkeypatch.setenv("CLAUDE_OFFICE_TMP", str(tmp_path / "tmp"))
     monkeypatch.setenv("CLAUDE_OFFICE_CONFIG", str(tmp_path / "office.config.json"))
     monkeypatch.setenv("CLAUDE_OFFICE_CHATS", str(tmp_path / "chats"))
+    monkeypatch.setenv("CLAUDE_OFFICE_LIBRARY", str(tmp_path / "office_library.json"))
     monkeypatch.setenv("CLAUDE_OFFICE_NAMES", str(tmp_path / "office_names.json"))
     monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "claude-home"))
     monkeypatch.setenv("CLAUDE_BIN", str(ROOT / "tests" / "fake_claude.py"))

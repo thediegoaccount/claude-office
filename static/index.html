@@ -31,6 +31,7 @@
       <button id="bbSound" class="seal green">som: ligado</button>
       <span id="bbClock">--:--</span>
     </footer>
+    <button id="bbLib" class="btn" title="agentes salvos e agendamentos">📚 Biblioteca e agendamentos</button>
     <button id="newBtn"><canvas id="newFace" width="40" height="55"></canvas><span><b>+ Novo Especialista</b><small>chamar alguém para uma tarefa</small></span></button>
     <div id="diag" hidden></div>
     <div id="tooltip" hidden></div>
@@ -74,7 +75,31 @@
     <div id="newTray" class="tray"></div>
     <p id="newCli" class="meta mono"></p>
     <p class="meta">Ações que pedem permissão aparecem no balão PERMITIR (40s).</p>
-    <div class="row end"><button id="newCancel" class="btn">Cancelar</button><button id="newSend" class="btn blue">Chamar especialista</button></div>
+    <div class="row end"><button id="newSave" class="btn" title="guarda nome, pasta, modelo e mensagem para chamar de novo ou agendar">Salvar na biblioteca</button><button id="newCancel" class="btn">Cancelar</button><button id="newSend" class="btn blue">Chamar especialista</button></div>
+  </div>
+</div></div>
+
+<div id="dlgLib" class="modal"><div class="panel dialog wide">
+  <h2><span>Biblioteca de agentes</span><button id="libClose" class="x" title="Fechar (Esc)">×</button></h2>
+  <div class="body">
+    <p class="meta">Agentes salvos para chamar com um clique ou na hora marcada. Os agendamentos só disparam com o escritório aberto; cada execução cria uma sessão nova.</p>
+    <ul id="libList" class="lib"></ul>
+    <div class="row end" id="libBar"><button id="libAdd" class="btn blue">+ Novo agente</button></div>
+    <div id="libForm" hidden>
+      <label>Nome<input id="libName" maxlength="60" placeholder="ex.: RELATÓRIO DIÁRIO"></label>
+      <label>Pasta de trabalho<select id="libCwd"></select></label>
+      <label>Modelo<select id="libModel"></select></label>
+      <label>Instrução<textarea id="libPrompt" rows="5" placeholder="O que ele deve fazer a cada execução?"></textarea></label>
+      <label>Agendamento<select id="libKind"><option value="off">sem agendamento (só manual)</option><option value="daily">em dias e horário fixos</option><option value="interval">a cada intervalo</option></select></label>
+      <div id="libDaily" class="row" hidden>
+        <input id="libTime" type="time" value="09:00">
+        <span id="libDays" class="days">
+          <label><input type="checkbox" id="libDay0" checked>seg</label><label><input type="checkbox" id="libDay1" checked>ter</label><label><input type="checkbox" id="libDay2" checked>qua</label><label><input type="checkbox" id="libDay3" checked>qui</label><label><input type="checkbox" id="libDay4" checked>sex</label><label><input type="checkbox" id="libDay5">sáb</label><label><input type="checkbox" id="libDay6">dom</label>
+        </span>
+      </div>
+      <div id="libInterval" class="row" hidden>a cada <input id="libEvery" type="number" min="1" value="1" style="width:70px"><select id="libUnit" style="flex:0 0 auto"><option value="60">horas</option><option value="1">minutos</option></select></div>
+      <div class="row end"><button id="libCancel" class="btn">Cancelar</button><button id="libSave" class="btn blue">Salvar</button></div>
+    </div>
   </div>
 </div></div>
 

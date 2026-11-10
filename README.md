@@ -152,6 +152,21 @@ Teste manual do fluxo de permissão, com o servidor rodando: `python tests\e2e_p
 - **O balão de permissão não aparece**: instale o hook, abra uma sessão **nova** e confira `office_permission.log`. O escritório precisa estar aberto no navegador.
 - **CLI: conectar / expirado**: clique no selo para fazer login. Se o `claude` não for encontrado, defina `claude_bin` no `office.config.json` ou a variável `CLAUDE_BIN`.
 
+## Biblioteca de agentes e agendamentos
+
+O botão **📚 Biblioteca e agendamentos** (acima do Novo Especialista) guarda agentes prontos: nome, pasta, modelo e instrução. Dá para criar ali mesmo ou usar **Salvar na biblioteca** no diálogo do Novo Especialista.
+
+- **Chamar agora**: abre uma sessão nova com aquela instrução. O agente mantém sempre a mesma aparência.
+- **Agendar**: em dias e horário fixos (ex.: seg a sex às 08:30) ou a cada intervalo (de 5 minutos a 7 dias). **Pausar/Retomar** liga e desliga sem apagar.
+- Cada item mostra a próxima execução, a última e o erro mais recente, se houver.
+
+Pontos de atenção:
+
+- O agendador roda **dentro do servidor**: só dispara com a janela do Claude Office aberta. Execução perdida há mais de 15 minutos é pulada (e fica anotada no item), não acumulada.
+- Cada disparo é uma **sessão nova**, sem memória da anterior, e consome tokens como uma chamada manual. Para tarefas simples, use um modelo externo.
+- Agendamentos rodam sem ninguém olhando: ações que pedem permissão esperam o balão PERMITIR por 40 s e depois são negadas. Prefira instruções de leitura e relatório, ou ajuste `permission_mode`.
+- A biblioteca fica em `office_library.json` (fora do git).
+
 ## Modelos externos (Gemini, OpenAI, Groq, OpenRouter, Ollama)
 
 Para perguntas que não precisam do Claude, dá para chamar um especialista que conversa com outro provedor e **não gasta tokens do Claude**. Funciona com qualquer API compatível com OpenAI (`/chat/completions`).

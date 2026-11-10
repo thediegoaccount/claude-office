@@ -142,3 +142,16 @@ label select, label input, label textarea { margin-top: 3px; }
 .md code { background: #ece6d8; padding: 1px 5px; border-radius: 3px; font: 13px Consolas, "Courier New", monospace; }
 .md pre { background: #1e272e; color: #dfe6e9; padding: 12px 14px; border-radius: 4px; overflow-x: auto; white-space: pre; font: 12.5px/1.5 Consolas, "Courier New", monospace; }
 .readFoot { padding: 0 10px 10px; margin-top: 0; }
+
+/* biblioteca de agentes */
+.dialog.wide { width: min(680px, 94vw); }
+.lib { list-style: none; margin: 6px 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.lib li { background: rgba(0, 0, 0, .25); border: 1px solid #000; border-radius: 4px; padding: 6px 8px; }
+.lib .rt { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.lib .err { color: #ff8a80; }
+.lib .off { opacity: .6; }
+.days { display: flex; gap: 6px; flex-wrap: wrap; }
+.days label { display: inline-flex; gap: 2px; align-items: center; margin: 0; }
+#libForm { border-top: 2px solid #000; margin-top: 8px; padding-top: 4px; }
+#bbLib { position: absolute; right: 12px; bottom: 92px; z-index: 3; padding: 6px 10px; box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .3), 3px 3px 0 rgba(0, 0, 0, .45); }
+.dialog.wide h2 { display: flex; justify-content: space-between; align-items: center; }

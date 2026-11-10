@@ -13,6 +13,7 @@ from urllib.parse import parse_qs, urlparse
 
 import cli_bridge
 import demo
+import library
 import office
 import permissions
 import providers
@@ -124,6 +125,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, {"text": office.full_text(sid, q.get("ref", [""])[0], root)})
             if u.path == "/api/health":
                 return self._send(200, self.app.health())
+            if u.path == "/api/library":
+                if not self._same_origin():
+                    return self._deny("origem")
+                return self._send(200, {"items": [] if self.app.demo else library.items(), "now": time.time()})
             if u.path in ("/api/cli/status", "/api/cli/models", "/api/token"):
                 if not self._same_origin():
                     return self._deny("origem")
@@ -188,8 +193,14 @@ class Handler(BaseHTTPRequestHandler):
             if self.app.demo:
                 return {"ok": True, "demo": True}
             return permissions.decide(b.get("id"), b.get("decision"))
-        if path.startswith("/api/cli/") and self.app.demo:
+        if path.startswith(("/api/cli/", "/api/library/")) and self.app.demo:
             raise RuntimeError(DEMO_MSG)
+        if path == "/api/library/save":
+            return library.save(b)
+        if path == "/api/library/delete":
+            return library.delete(str(b.get("id") or ""))
+        if path == "/api/library/run":
+            return library.run(str(b.get("id") or ""))
         if path == "/api/cli/new":
             return cli_bridge.new_session(b.get("cwd"), b.get("title"), b.get("prompt"), bool(b.get("plan")),
                                           b.get("model") or None, b.get("look_seed"), b.get("images"))
@@ -235,6 +246,8 @@ def main(argv=None):
     print("Deixe esta janela aberta enquanto usa o escritório; feche-a (ou Ctrl+C) para encerrar.", flush=True)
     if a.abrir:
         webbrowser.open(url)
+    if not a.demo:
+        library.start()
     t = threading.Thread(target=srv.serve_forever, daemon=True)
     t.start()
     try:

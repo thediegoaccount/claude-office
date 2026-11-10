@@ -5,3 +5,4 @@ __pycache__/
 .ruff_cache/
 *.tmp
 office_chats/
+office_library.json

@@ -2158,6 +2158,82 @@
     $("newSend").disabled = bad;
   }
 
+  // ---------- biblioteca de agentes e agendamentos ----------
+  const DAYS = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
+  let libItems = [], libEditing = null;
+  const fmtWhen = (ts) => (ts ? new Date(ts * 1000).toLocaleString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—");
+  function schedText(s) {
+    if (!s || s.kind === "off" || !s.kind) return "sem agendamento";
+    if (s.kind === "interval") return s.every_minutes % 60 === 0 ? `a cada ${s.every_minutes / 60} h` : `a cada ${s.every_minutes} min`;
+    return `${s.days.length === 7 ? "todo dia" : s.days.map((d) => DAYS[d]).join(", ")} às ${s.time}`;
+  }
+  function renderLib() {
+    $("libList").innerHTML = libItems.length ? libItems.map((it) => {
+      const sched = it.schedule && it.schedule.kind !== "off";
+      const when = !sched ? "" : it.enabled ? ` · próxima: ${fmtWhen(it.next_run)}` : " · pausado";
+      return `<li class="${sched && !it.enabled ? "off" : ""}"><div class="rt"><b>${esc(it.name)}</b><span class="meta">${esc(modelShort(it.model))}</span></div>
+        <div class="meta">${esc(String(it.prompt).slice(0, 140))}${it.prompt.length > 140 ? "…" : ""}</div>
+        <div class="meta">⏰ ${esc(schedText(it.schedule))}${esc(when)}${it.last_run ? ` · última: ${esc(fmtWhen(it.last_run))} (${it.runs || 0}x)` : ""}</div>
+        ${it.last_error ? `<div class="meta err">⚠ ${esc(it.last_error)}</div>` : ""}
+        <div class="row end"><button class="btn green" data-lib="run" data-id="${esc(it.id)}">▶ Chamar agora</button>${sched ? `<button class="btn" data-lib="toggle" data-id="${esc(it.id)}">${it.enabled ? "Pausar" : "Retomar"}</button>` : ""}<button class="btn" data-lib="edit" data-id="${esc(it.id)}">Editar</button><button class="btn red" data-lib="del" data-id="${esc(it.id)}">Excluir</button></div></li>`;
+    }).join("") : `<li class="meta">Nenhum agente salvo ainda. Use "+ Novo agente" ou o botão "Salvar na biblioteca" do Novo Especialista.</li>`;
+  }
+  async function loadLib() {
+    try { libItems = (await api("/api/library")).items || []; } catch (e) { libItems = []; toast(e.message, "red"); }
+    renderLib();
+  }
+  function libKindChanged() {
+    $("libDaily").hidden = $("libKind").value !== "daily";
+    $("libInterval").hidden = $("libKind").value !== "interval";
+  }
+  function openLibForm(it) {
+    libEditing = it || null;
+    const c = S.cli || {}, s = (it && it.schedule) || { kind: "off" };
+    $("libCwd").innerHTML = (c.workspaces || []).map((w) => `<option>${esc(w)}</option>`).join("") || `<option value="">(nenhuma pasta em workspace_roots)</option>`;
+    fillModels($("libModel"), "padrão do CLI");
+    $("libName").value = it ? it.name : ""; $("libPrompt").value = it ? it.prompt : "";
+    if (it && it.cwd) $("libCwd").value = it.cwd;
+    $("libModel").value = (it && it.model) || "";
+    $("libKind").value = s.kind || "off";
+    $("libTime").value = s.time || "09:00";
+    DAYS.forEach((_, d) => { $("libDay" + d).checked = s.days ? s.days.includes(d) : d < 5; });
+    const every = s.every_minutes || 60, hours = every % 60 === 0;
+    $("libEvery").value = hours ? every / 60 : every; $("libUnit").value = hours ? "60" : "1";
+    libKindChanged();
+    $("libForm").hidden = false; $("libBar").hidden = true;
+  }
+  function closeLibForm() { $("libForm").hidden = true; $("libBar").hidden = false; libEditing = null; }
+  async function saveLib() {
+    const kind = $("libKind").value;
+    const schedule = kind === "daily" ? { kind, time: $("libTime").value, days: DAYS.map((_, d) => d).filter((d) => $("libDay" + d).checked) }
+      : kind === "interval" ? { kind, every_minutes: Math.round(+$("libEvery").value * +$("libUnit").value) } : { kind: "off" };
+    try {
+      await api("/api/library/save", { id: libEditing && libEditing.id, name: $("libName").value.trim(), prompt: $("libPrompt").value, cwd: $("libCwd").value,
+        model: $("libModel").value || null, schedule, enabled: libEditing ? libEditing.enabled || libEditing.schedule.kind === "off" : true });
+      closeLibForm(); toast("Agente salvo na biblioteca"); loadLib();
+    } catch (e) { toast(e.message, "red"); }
+  }
+  async function libAction(action, id) {
+    const it = libItems.find((x) => x.id === id);
+    if (!it) return;
+    try {
+      if (action === "edit") return openLibForm(it);
+      if (action === "run") { const job = await api("/api/library/run", { id }); S.jobs.unshift(job); toast(`'${it.name}' chamado; ele entra pela porta em instantes`); }
+      else if (action === "toggle") await api("/api/library/save", { ...it, enabled: !it.enabled });
+      else if (action === "del") { if (!window.confirm || window.confirm(`Excluir '${it.name}' da biblioteca?`)) await api("/api/library/delete", { id }); else return; }
+    } catch (e) { toast(e.message, "red"); }
+    loadLib();
+  }
+  async function openLib() { await refreshCli(); closeLibForm(); modal("dlgLib", true); loadLib(); }
+  async function saveNewToLib() {
+    const prompt = $("newPrompt").value.trim(), name = $("newTitle").value.trim();
+    if (!name || !prompt) return toast("Preencha o nome e a primeira mensagem para salvar", "red");
+    try {
+      await api("/api/library/save", { name, prompt, cwd: $("newCwd").value, model: $("newModel").value || null, look_seed: nextSeed, schedule: { kind: "off" } });
+      toast("Salvo na biblioteca; abra a Biblioteca (botão acima do Novo Especialista) para agendar");
+    } catch (e) { toast(e.message, "red"); }
+  }
+
   async function openNew() {
     await refreshCli();
     const c = S.cli || {};
@@ -2289,12 +2365,20 @@
       const t = ev.target;
       if (!t || !t.dataset) return;
       if (t.classList && t.classList.contains("more")) toggleMore(t);
+      else if (t.dataset.lib) libAction(t.dataset.lib, t.dataset.id);
       else if (t.dataset.decide) decide(t.dataset.id, t.dataset.decide);
       else if (t.dataset.cancel) api("/api/cli/cancel", { id: t.dataset.cancel }).then(refreshCli).catch((e) => toast(e.message, "red"));
       else if (t.dataset.rm) { const [w, i] = t.dataset.rm.split(":"); images[w].splice(+i, 1); renderTray(w); }
       else if (t.dataset.copyjob) { const j = S.jobs.find((x) => x.id === t.dataset.copyjob); if (j) copyText(j.output); }
       else if (t.dataset.openjob) { const j = S.jobs.find((x) => x.id === t.dataset.openjob); if (j) openReader(j); }
     });
+    $("bbLib").onclick = openLib;
+    $("libClose").onclick = () => modal("dlgLib", false);
+    $("libAdd").onclick = () => openLibForm(null);
+    $("libCancel").onclick = closeLibForm;
+    $("libSave").onclick = saveLib;
+    $("libKind").onchange = libKindChanged;
+    $("newSave").onclick = saveNewToLib;
     const closeReader = () => modal("dlgRead", false);
     $("readClose").onclick = closeReader;
     $("readDone").onclick = closeReader;
