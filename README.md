@@ -154,7 +154,7 @@ Teste manual do fluxo de permissão, com o servidor rodando: `python tests\e2e_p
 
 ## Biblioteca de agentes e agendamentos
 
-O botão **📚 Biblioteca e agendamentos** (acima do Novo Especialista) guarda agentes prontos: nome, pasta, modelo e instrução. Dá para criar ali mesmo ou usar **Salvar na biblioteca** no diálogo do Novo Especialista.
+O botão **📚 Biblioteca e agendamentos** (acima do Novo Especialista) guarda agentes prontos: nome, pasta, modelo e instrução. Criar um agente abre uma **ficha de personagem de RPG**: retrato com "Sortear aparência", classe (o modelo), reino (a pasta), missão (a instrução) e rotina (o agendamento). Os atributos Poder, Velocidade e Custo são ilustrativos. Também dá para usar **Salvar na biblioteca** no diálogo do Novo Especialista.
 
 - **Chamar agora**: abre uma sessão nova com aquela instrução. O agente mantém sempre a mesma aparência.
 - **Agendar**: em dias e horário fixos (ex.: seg a sex às 08:30) ou a cada intervalo (de 5 minutos a 7 dias). **Pausar/Retomar** liga e desliga sem apagar.

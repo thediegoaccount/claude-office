@@ -155,3 +155,32 @@ label select, label input, label textarea { margin-top: 3px; }
 #libForm { border-top: 2px solid #000; margin-top: 8px; padding-top: 4px; }
 #bbLib { position: absolute; right: 12px; bottom: 92px; z-index: 3; padding: 6px 10px; box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .3), 3px 3px 0 rgba(0, 0, 0, .45); }
 .dialog.wide h2 { display: flex; justify-content: space-between; align-items: center; }
+
+/* criação de personagem (biblioteca) */
+[hidden] { display: none !important; }
+.dialog { overflow-x: hidden; }
+.rpg { border: 2px solid #000; border-radius: 6px; margin-top: 8px; padding: 8px 10px 10px; background: linear-gradient(#2a2136, #1a1524); box-shadow: inset 0 0 0 2px #c9a227, inset 0 0 0 4px #000; }
+.rpg h3 { margin: 4px 0 8px; text-align: center; color: #ffd866; font: bold 14px Verdana; letter-spacing: 1px; text-shadow: 1px 1px 0 #000; }
+.rpgGrid { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 12px; }
+.rpgLeft { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.rpgStage { width: 150px; height: 196px; display: flex; align-items: flex-end; justify-content: center; border: 2px solid #000; border-radius: 6px; padding-bottom: 6px;
+  background: radial-gradient(ellipse at 50% 92%, rgba(0, 0, 0, .55) 0 22%, transparent 23%), linear-gradient(#3b4a6b, #1d2438 70%, #4a3b2a 70%); box-shadow: inset 0 0 0 2px #c9a227; }
+.rpgStage canvas { width: 96px; height: 180px; image-rendering: pixelated; background: none; border: none; }
+.rpgNick { min-height: 28px; text-align: center; color: #ffeaa7; font-size: 11px; }
+.rpgNick b { display: block; color: #ffd866; font-size: 12px; }
+.rpgStats { width: 100%; font-size: 11px; color: #dfe6e9; }
+.rpgStats div { display: flex; justify-content: space-between; align-items: center; margin-top: 3px; }
+.rpgStats i { display: inline-block; width: 12px; height: 8px; margin-left: 2px; border: 1px solid #000; background: #2d3436; }
+.rpgStats i.on { background: #ffd866; } .rpgStats .cost i.on { background: #ff7675; } .rpgStats .spd i.on { background: #74b9ff; }
+.rpgStats small { display: block; margin-top: 5px; color: #b2bec3; line-height: 1.35; }
+.rpgLabel { margin: 6px 0 3px; color: #c7d3db; }
+.rpgClasses { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 5px; max-height: 132px; overflow-y: auto; }
+.rpgClass { background: #0e1a24; color: #dfe6e9; border: 2px solid #000; border-radius: 4px; padding: 4px 5px; cursor: pointer; text-align: left; font: 11px Verdana; box-shadow: inset 0 0 0 1px var(--edge); }
+.rpgClass * { pointer-events: none; }
+.rpgClass b { display: block; color: #ffd866; } .rpgClass small { color: #b2bec3; word-break: break-all; }
+.rpgClass:hover { filter: brightness(1.25); }
+.rpgClass.on { background: #3a2f12; box-shadow: inset 0 0 0 2px #ffd866; }
+.rpgSub { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 4px 0; }
+.rpgSub input[type=time] { width: 110px; } .rpgSub input[type=number] { width: 70px; } .rpgSub select { width: auto; }
+.days input { width: auto; margin: 0; box-shadow: none; }
+@media (max-width: 620px) { .rpgGrid { grid-template-columns: 1fr; } }

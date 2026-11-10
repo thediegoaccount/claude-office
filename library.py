@@ -104,6 +104,9 @@ def save(data):
             cur = {"id": uuid.uuid4().hex[:12], "created": now, "runs": 0, "last_run": None, "last_error": None,
                    "look_seed": seed if isinstance(seed, str) and cli_bridge.SEED_RE.match(seed) else f"lib-{uuid.uuid4().hex[:10]}"}
             all_items.append(cur)
+        seed = data.get("look_seed")
+        if isinstance(seed, str) and cli_bridge.SEED_RE.match(seed):
+            cur["look_seed"] = seed
         enabled = bool(data.get("enabled", True)) and schedule["kind"] != "off"
         changed = schedule != cur.get("schedule") or enabled != cur.get("enabled")
         cur.update(name=name, prompt=prompt, model=model, cwd=cwd, schedule=schedule, enabled=enabled)

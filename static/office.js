@@ -2186,6 +2186,36 @@
     $("libDaily").hidden = $("libKind").value !== "daily";
     $("libInterval").hidden = $("libKind").value !== "interval";
   }
+  // Ficha de RPG: classe e atributos são ilustrativos, derivados do modelo escolhido.
+  function classInfo(model) {
+    const m = String(model || "").toLowerCase();
+    if (isExternal(model)) return { title: "Mercenário", desc: "Provedor externo: só conversa, sem ferramentas, e não gasta tokens do Claude.", pow: 2, spd: 4, cost: 0 };
+    if (/fable|mythos/.test(m)) return { title: "Lendário", desc: "O mais capaz e o mais caro. Para as missões mais difíceis.", pow: 5, spd: 2, cost: 5 };
+    if (/opus/.test(m)) return { title: "Arquimago", desc: "Raciocínio profundo para tarefas complexas.", pow: 4, spd: 2, cost: 4 };
+    if (/sonnet/.test(m)) return { title: "Cavaleiro", desc: "Equilíbrio entre força e custo para o dia a dia.", pow: 3, spd: 3, cost: 3 };
+    if (/haiku/.test(m)) return { title: "Batedor", desc: "Rápido e barato, ideal para rondas frequentes.", pow: 2, spd: 5, cost: 1 };
+    return { title: "Aventureiro", desc: m ? "Modelo configurado." : "Usa o modelo padrão do CLI.", pow: 3, spd: 3, cost: 3 };
+  }
+  let libSeed = "";
+  const randomSeed = (p) => `${p}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  function renderHero() {
+    const model = $("libModel").value, info = classInfo(model), human = !isAnthropic(model), arch = archetypeFor(libSeed);
+    const cv = $("libFace");
+    if (cv && window.Sprites) {
+      const c = cv.getContext("2d");
+      c.imageSmoothingEnabled = false;
+      c.clearRect(0, 0, cv.width, cv.height);
+      const spr = window.Sprites.build(lookOf(libSeed, model, arch), "stand", 0);
+      c.drawImage(spr, 0, cv.height - spr.height * 4, spr.width * 4, spr.height * 4);
+    }
+    $("libNick").innerHTML = `<b>${esc(info.title)}</b>${human ? esc(arch.nick) : "mascote do Claude"}`;
+    const bar = (n) => [1, 2, 3, 4, 5].map((k) => `<i class="${k <= n ? "on" : ""}"></i>`).join("");
+    $("libStats").innerHTML = `<div><span>Poder</span><span>${bar(info.pow)}</span></div><div class="spd"><span>Velocidade</span><span>${bar(info.spd)}</span></div>
+      <div class="cost"><span>Custo</span><span>${bar(info.cost)}</span></div><small>${esc(info.desc)}</small>`;
+    const opts = [""].concat(((S.models && S.models.groups) || []).flatMap((g) => g.models));
+    $("libClasses").innerHTML = opts.map((v) => `<button type="button" class="rpgClass${v === model ? " on" : ""}" data-class="${esc(v)}"><b>${esc(classInfo(v).title)}</b><small>${esc(modelShort(v))}</small></button>`).join("");
+  }
+  function pickClass(v) { $("libModel").value = v; renderHero(); }
   function openLibForm(it) {
     libEditing = it || null;
     const c = S.cli || {}, s = (it && it.schedule) || { kind: "off" };
@@ -2199,18 +2229,21 @@
     DAYS.forEach((_, d) => { $("libDay" + d).checked = s.days ? s.days.includes(d) : d < 5; });
     const every = s.every_minutes || 60, hours = every % 60 === 0;
     $("libEvery").value = hours ? every / 60 : every; $("libUnit").value = hours ? "60" : "1";
-    libKindChanged();
-    $("libForm").hidden = false; $("libBar").hidden = true;
+    libSeed = (it && it.look_seed) || randomSeed("lib");
+    $("libFormTitle").textContent = it ? "⚔ Ficha do personagem" : "⚔ Criação de personagem";
+    $("libSave").textContent = it ? "Salvar herói" : "⚔ Criar herói";
+    libKindChanged(); renderHero();
+    $("libForm").hidden = false; $("libBar").hidden = true; $("libList").hidden = true;
   }
-  function closeLibForm() { $("libForm").hidden = true; $("libBar").hidden = false; libEditing = null; }
+  function closeLibForm() { $("libForm").hidden = true; $("libBar").hidden = false; $("libList").hidden = false; libEditing = null; }
   async function saveLib() {
     const kind = $("libKind").value;
     const schedule = kind === "daily" ? { kind, time: $("libTime").value, days: DAYS.map((_, d) => d).filter((d) => $("libDay" + d).checked) }
       : kind === "interval" ? { kind, every_minutes: Math.round(+$("libEvery").value * +$("libUnit").value) } : { kind: "off" };
     try {
       await api("/api/library/save", { id: libEditing && libEditing.id, name: $("libName").value.trim(), prompt: $("libPrompt").value, cwd: $("libCwd").value,
-        model: $("libModel").value || null, schedule, enabled: libEditing ? libEditing.enabled || libEditing.schedule.kind === "off" : true });
-      closeLibForm(); toast("Agente salvo na biblioteca"); loadLib();
+        model: $("libModel").value || null, look_seed: libSeed, schedule, enabled: libEditing ? libEditing.enabled || libEditing.schedule.kind === "off" : true });
+      closeLibForm(); toast("Herói salvo na biblioteca"); loadLib();
     } catch (e) { toast(e.message, "red"); }
   }
   async function libAction(action, id) {
@@ -2365,6 +2398,7 @@
       const t = ev.target;
       if (!t || !t.dataset) return;
       if (t.classList && t.classList.contains("more")) toggleMore(t);
+      else if ("class" in t.dataset) pickClass(t.dataset.class);
       else if (t.dataset.lib) libAction(t.dataset.lib, t.dataset.id);
       else if (t.dataset.decide) decide(t.dataset.id, t.dataset.decide);
       else if (t.dataset.cancel) api("/api/cli/cancel", { id: t.dataset.cancel }).then(refreshCli).catch((e) => toast(e.message, "red"));
@@ -2378,6 +2412,7 @@
     $("libCancel").onclick = closeLibForm;
     $("libSave").onclick = saveLib;
     $("libKind").onchange = libKindChanged;
+    $("libRoll").onclick = () => { libSeed = randomSeed("lib"); renderHero(); };
     $("newSave").onclick = saveNewToLib;
     const closeReader = () => modal("dlgRead", false);
     $("readClose").onclick = closeReader;
