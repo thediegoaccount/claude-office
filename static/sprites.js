@@ -24,6 +24,12 @@
       ".osssssssssssSo."],
   };
   const HAIR_TOP = { bun: -3 };
+  // Mago (gerente): chapéu pontudo (18 colunas, 3 linhas acima da cabeça) e barba longa sobre o peito.
+  const WIZ_HAT = ["........oo........", ".......ozzo.......", "......ozzzZo......", ".....ozzzzzZo.....", "....ozzzzzzzZo....",
+    "...ozzzzzzzzzZo...", "..onnnnnnnnnnnNo..", "ozzzzzzzzzzzzzzzZo", "oooooooooooooooooo"];
+  const BEARD = ["", "", "", "", "", "", "", "", "", "", "", ".ohhhhhhhhhhhho.", ".ohhhhmmmhhhhho.", ".ohhhhhhhhhhhho.", "..ohhhhhhhhhho..",
+    "..ohhhhhhhhhHo..", "...ohhhhhhhHo...", "...ohhhhhhhHo...", "....ohhhhhHo....", "....ohhhhhHo....", ".....ohhHHo.....", "......ohHo......",
+    ".......oo......."];
   const GLASSES = ["", "", "", "", "", "", "", "...gggg.gggg....", "...g..ggg..g....", "...g..g.g..g....", "...gggg.gggg...."];
   const BLUSH = ["", "", "", "", "", "", "", "", "", "", "", "..BB........BB.."];
   const TORSOS = {
@@ -71,6 +77,7 @@
       w: "#ffffff", e: "#2b1d14", m: shade(look.skin, 0.55), B: "#f1948a", t: look.shirt, T: shade(look.shirt, 0.72),
       c: "#f4f4f4", n: look.accent, N: shade(look.accent, 0.72), j: look.jacket, J: shade(look.jacket, 0.72),
       a: arm, A: shade(arm, 0.72), p: look.pants, P: shade(look.pants, 0.72), k: "#222", g: "#2b2b2b", q: "#6e4b2a", Q: "#4e3319",
+      z: look.hatColor || look.accent, Z: shade(look.hatColor || look.accent, 0.72),
     };
   }
 
@@ -177,8 +184,9 @@
     const headY = 3, torsoY = 20, armY = 21, legY = 31;
     const dy = pose === "type" ? frame % 2 : pose === "sleep" ? 2 : 0;
     const dress = look.torso === "dress";
-    if (sitting) stamp(g, dress ? SKIRT_SIT : LEG_SIT, 4, legY);
-    else if (dress) stamp(g, SKIRT, 4, legY);
+    const robe = look.robe ? (ch) => (ch === "s" ? "p" : ch) : null;
+    if (sitting) stamp(g, dress ? SKIRT_SIT : LEG_SIT, 4, legY, dress ? robe : null);
+    else if (dress) stamp(g, SKIRT, 4, legY, robe);
     else {
       const walk = pose === "walk";
       stamp(g, LEG, 4, legY - (walk && frame % 2 === 0 ? 1 : 0));
@@ -199,6 +207,8 @@
     stamp(g, HEAD, 4, headY + dy, faceMap);
     const hair = HAIRS[look.hairStyle] || [];
     stamp(g, hair, 4, headY + dy + (HAIR_TOP[look.hairStyle] || 0));
+    if (look.beard && !back) stamp(g, BEARD, 4, headY + dy);
+    if (look.hat === "wizard") stamp(g, WIZ_HAT, 3, headY + dy - 3);
     if (!back) {
       if (look.blush) stamp(g, BLUSH, 4, headY + dy);
       if (pose === "sleep") {
@@ -239,8 +249,8 @@
 
   root.Sprites = {
     build, grid, critterGrid, shade, W, TOP,
-    maps: { HEAD, HAIRS, GLASSES, BLUSH, TORSOS, BAG_STRAP, BAG, ARM_DOWN, ARM_TYPE, ARM_UP, ARM_CUP, LEG, LEG_SIT, SKIRT, SKIRT_SIT },
-    widths: { HEAD: 16, HAIRS: 16, GLASSES: 16, BLUSH: 16, TORSOS: 16, BAG_STRAP: 16, BAG: 8, ARM_DOWN: 4, ARM_TYPE: 4, ARM_UP: 4,
+    maps: { WIZ_HAT, BEARD, HEAD, HAIRS, GLASSES, BLUSH, TORSOS, BAG_STRAP, BAG, ARM_DOWN, ARM_TYPE, ARM_UP, ARM_CUP, LEG, LEG_SIT, SKIRT, SKIRT_SIT },
+    widths: { WIZ_HAT: 18, BEARD: 16, HEAD: 16, HAIRS: 16, GLASSES: 16, BLUSH: 16, TORSOS: 16, BAG_STRAP: 16, BAG: 8, ARM_DOWN: 4, ARM_TYPE: 4, ARM_UP: 4,
       ARM_CUP: 4, LEG: 7, LEG_SIT: 16, SKIRT: 16, SKIRT_SIT: 16 },
   };
 })(typeof window !== "undefined" ? window : globalThis);

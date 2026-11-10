@@ -176,9 +176,9 @@
     meeting: ["essa reunião podia ser um e-mail", "próximo slide…", "alguém trouxe os donuts?"],
     sofa: ["5 minutinhos…", "zZz"],
   };
-  const BOSS_LINES = ["Melhor chefe do mundo. Tá escrito na caneca.", "Reunião em 5 min na sala de reunião!", "Não sou só o chefe, sou amigo primeiro.", "Hoje tem troféu pro melhor commit!"];
-  const MANAGER_LOOK = { shirt: "#f4f4f4", hair: "#2d1b0e", skin: "#f5cba7", pants: "#1a1a1a", accent: "#c0392b", jacket: "#1a1a1a",
-    hairStyle: "parted", torso: "jacket", glasses: true, bag: false, blush: false };
+  const BOSS_LINES = ["Melhor chefe do mundo. Tá escrito na caneca.", "Reunião em 5 min na sala de reunião!", "Não sou só o chefe, sou amigo primeiro.", "Hoje tem troféu pro melhor commit!", "Um bom feitiço ajuda, mas um bom commit resolve.", "A varinha é só para apontar o bug."];
+  const MANAGER_LOOK = { shirt: "#1f3a60", hair: "#ecf0f1", skin: "#f5cba7", pants: "#1f3a60", accent: "#f1c40f", jacket: "#1f3a60",
+    hairStyle: "long", torso: "dress", glasses: false, bag: false, blush: false, beard: true, hat: "wizard", hatColor: "#1f3a60", robe: true };
   function modelShort(m) {
     if (!m) return "padrão do CLI";
     if (String(m).includes("/")) return String(m).replace(/^[a-z0-9_-]+\//, "");
