@@ -123,7 +123,15 @@
 <div id="dlgRead" class="modal"><div class="panel dialog reader">
   <h2><span id="readTitle">Resposta</span><button id="readClose" class="x" title="Fechar (Esc)">×</button></h2>
   <div id="readBody" class="md"></div>
-  <div class="row end readFoot"><button id="readCopy" class="btn">⧉ Copiar</button><button id="readDone" class="btn blue">Fechar</button></div>
+  <div class="readChat">
+    <textarea id="readText" rows="2" placeholder="Responder a este agente (Ctrl+Enter envia)"></textarea>
+    <div class="row">
+      <label class="check" title="quando um agente terminar de responder, a resposta abre sozinha aqui"><input type="checkbox" id="readAuto">abrir respostas automaticamente</label>
+      <span id="readStatus" class="meta"></span>
+      <span class="spacer"></span>
+      <button id="readCopy" class="btn">⧉ Copiar</button><button id="readDone" class="btn">Fechar</button><button id="readSend" class="btn blue">Enviar</button>
+    </div>
+  </div>
 </div></div>
 
 <div id="dlgPlan" class="modal"><div class="panel dialog">

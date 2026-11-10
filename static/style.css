@@ -186,3 +186,7 @@ label select, label input, label textarea { margin-top: 3px; }
 @media (max-width: 620px) { .rpgGrid { grid-template-columns: 1fr; } }
 label.check { display: flex; gap: 6px; align-items: center; }
 label.check input { width: auto; margin: 0; box-shadow: none; }
+.readChat { padding: 0 10px 10px; }
+.readChat .row { flex-wrap: wrap; }
+.readChat .spacer { flex: 1; }
+.readChat label.check { margin: 0; }

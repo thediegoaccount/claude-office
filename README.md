@@ -104,6 +104,7 @@ O canto inferior esquerdo mostra as 5 sessões que mais gastaram no ciclo, com o
 ## Criar sessões e enviar comandos
 
 - **+ Novo Especialista**: escolha a pasta (dentro de `workspace_roots`), o nome, o modelo e a primeira mensagem (Ctrl+V cola imagens). O rosto no botão é o do próximo boneco: ele entra pela porta com essa aparência.
+- **Resposta no centro da tela**: o botão "Ampliar" abre a resposta num leitor grande, com uma caixa de conversa embaixo para responder ao agente ali mesmo (Ctrl+Enter envia); quando a nova resposta chega, o leitor atualiza sozinho. Marque **"abrir respostas automaticamente"** no rodapé do leitor para que toda resposta nova apareça assim, sem clicar. Se você estiver digitando, o leitor não troca de resposta: avisa e deixa a outra no painel do agente.
 - **Enviar comando**: selecione um agente, escreva no painel e use Ctrl+Enter. Você pode trocar o modelo e colar ou arrastar imagens (até 5, de 5 MB cada).
 - Antes de enviar, o escritório pergunta **"Quer um plano antes?"**. "Sim" usa `--permission-mode plan` quando o CLI tem esse modo; senão, prefixa um pedido de plano que pede para o agente parar antes de agir.
 - Cada sessão roda **um comando por vez** (até 1 h). O botão Cancelar encerra o processo.

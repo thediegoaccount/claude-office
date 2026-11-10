@@ -1754,7 +1754,7 @@
     cam.tx = tg.x; cam.ty = tg.y; cam.tz = tg.z;
     cam.x += (cam.tx - cam.x) * kk; cam.y += (cam.ty - cam.y) * kk; cam.z += (cam.tz - cam.z) * kk;
     const labOn = [...seats.keys()].some((i) => DESKS[i].room === "annex");
-    if (labOn && !S.lab.on && !S.first && !TEST) toast("Escritório lotado: a luz do Startup Lab acendeu", "yellow");
+    if (labOn && !S.lab.on && !S.first && !TEST) toast("A luz do Startup Lab acendeu: tem agente trabalhando lá", "yellow");
     S.lab.on = labOn;
     S.lab.level = clamp(S.lab.level + (labOn ? 1 : -1) * dt / 1.5, 0, 1);
     evalT -= dt;
@@ -1947,7 +1947,39 @@
     S.readText = job.output || "";
     $("readBody").innerHTML = mdToHtml(S.readText);
     $("readBody").scrollTop = 0;
+    S.readSession = job.session;
+    const can = !!a && a.kind === "session";
+    $("readText").disabled = !can; $("readSend").disabled = !can;
+    $("readText").placeholder = can ? "Responder a este agente (Ctrl+Enter envia)" : "Não é possível responder aqui (subagente, gerente ou sessão fora da janela)";
+    if (S.readWait && S.readWait.session !== job.session) S.readWait = null;
+    $("readStatus").textContent = S.readWait ? "enviado; aguardando a resposta…" : job.error ? `⚠ ${job.error}` : "";
     modal("dlgRead", true);
+  }
+  // Conversa dentro do leitor: envia para a sessão da resposta aberta e troca o texto quando a nova resposta chegar.
+  async function sendRead() {
+    const prompt = $("readText").value.trim();
+    if (!prompt || !S.readSession) return;
+    try {
+      const job = await api("/api/cli/send", { session: S.readSession, prompt, plan: false, model: null, images: [] });
+      S.jobs.unshift(job);
+      S.readWait = { id: job.id, session: job.session };
+      $("readText").value = "";
+      $("readStatus").textContent = "enviado; aguardando a resposta…";
+      if (job.warning) toast(job.warning, "yellow");
+    } catch (e) { toast(e.message, "red"); }
+  }
+  function jobsFinished(wasRunning) {
+    for (const job of S.jobs) {
+      if (job.running || !wasRunning.has(job.id) || job.kind === "triage" || job.cancelled) continue;
+      const mine = S.readWait && S.readWait.id === job.id;
+      if (mine) S.readWait = null;
+      if (!job.output && !mine) continue;
+      const open = $("dlgRead").classList.contains("open");
+      if (mine && open) { openReader(job); continue; }
+      if (!$("readAuto").checked) continue;
+      if (open && ($("readText").value.trim() || S.readWait)) { toast(`${(agentById(job.session) || {}).title || "Agente"} respondeu; a resposta está no painel dele`, "yellow"); continue; }
+      openReader(job);
+    }
   }
 
   function renderLife() {
@@ -2091,8 +2123,10 @@
   async function refreshCli(recheck) {
     if (S.state && S.state.demo) { S.cli = { demo: true, available: false, logged_in: false, workspaces: [], jobs: [] }; renderCli(); return; }
     try {
+      const wasRunning = new Set((S.jobs || []).filter((j) => j.running).map((j) => j.id));
       S.cli = await api(`/api/cli/status${recheck ? "?recheck=1" : ""}`);
       S.jobs = S.cli.jobs || [];
+      jobsFinished(wasRunning);
       if (S.cli.logged_in) S.loginUntil = 0;
     } catch (e) { S.cli = { available: false, logged_in: false, auth_state: "error", auth_message: e.message, workspaces: [], jobs: [] }; }
     renderCli();
@@ -2443,6 +2477,10 @@
     $("readClose").onclick = closeReader;
     $("readDone").onclick = closeReader;
     $("readCopy").onclick = () => { if (S.readText) copyText(S.readText); };
+    $("readSend").onclick = sendRead;
+    $("readText").addEventListener("keydown", (ev) => { if (ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); sendRead(); } });
+    $("readAuto").checked = store.get("office.autoread", "0") === "1";
+    $("readAuto").onchange = () => store.set("office.autoread", $("readAuto").checked ? "1" : "0");
     $("dlgRead").addEventListener("click", (ev) => { if (ev.target === $("dlgRead")) closeReader(); });
     doc.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && $("dlgRead").classList.contains("open")) closeReader(); });
     const win = $("bbWindow");
